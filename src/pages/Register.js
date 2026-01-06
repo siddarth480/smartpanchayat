@@ -33,6 +33,12 @@ const Register = () => {
     e.preventDefault();
     setError("");
 
+    const phoneRegex = /^[0-9]{10}$/;
+    if (!phoneRegex.test(phone)) {
+      setError("Please enter a valid 10-digit mobile number.");
+      return;
+    }
+
     if (password !== confirmPass) {
       setError("Passwords do not match.");
       return;
@@ -167,10 +173,16 @@ const Register = () => {
               <Phone size={18} style={styles.inputIcon} color="#64748b" />
               <input
                 className="register-input"
-                type="text"
+                type="text" // Keep as text to use maxLength
+                inputMode="numeric" // Shows number pad on mobile
                 placeholder="Phone Number"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                maxLength={10} // Prevents more than 10 digits
+                onChange={(e) => {
+                  // Logic to allow ONLY numbers to be typed
+                  const value = e.target.value.replace(/\D/g, "");
+                  setPhone(value);
+                }}
                 required
                 style={styles.input}
               />
