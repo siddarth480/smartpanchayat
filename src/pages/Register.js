@@ -1,9 +1,21 @@
+// src/pages/Register.js
 import React, { useState } from "react";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth, db } from "../firebase/firebase";
 import { useNavigate, Link } from "react-router-dom";
 import { doc, setDoc } from "firebase/firestore";
-import { nanoid } from "nanoid"; // install using: npm install nanoid
+import { nanoid } from "nanoid";
+import {
+  User,
+  Phone,
+  Users,
+  Mail,
+  Lock,
+  UserPlus,
+  ArrowLeft,
+  AlertCircle,
+  CheckCircle2,
+} from "lucide-react";
 
 const Register = () => {
   const navigate = useNavigate();
@@ -27,8 +39,8 @@ const Register = () => {
     }
 
     const count = parseInt(familyCount);
-    if (isNaN(count) || count < 1) {
-      setError("Please enter a valid number of family members (at least 1).");
+    if (isNaN(count) || count < 0) {
+      setError("Please enter a valid number of family members.");
       return;
     }
 
@@ -41,7 +53,6 @@ const Register = () => {
       );
       const user = userCredential.user;
 
-      // generate short unique Family ID
       const familyCode = "FAM-" + nanoid(6).toUpperCase();
 
       await setDoc(doc(db, "users", user.uid), {
@@ -50,8 +61,8 @@ const Register = () => {
         fullName,
         phone,
         numberOfFamilyMembers: count,
-        familyId: user.uid, // internal reference
-        familyCode, // user-friendly search ID
+        familyId: user.uid,
+        familyCode,
         role: "villager",
         createdAt: new Date().toISOString(),
       });
@@ -60,12 +71,10 @@ const Register = () => {
     } catch (err) {
       if (err.code === "auth/email-already-in-use") {
         setError("This email is already in use.");
-      } else if (err.code === "auth/invalid-email") {
-        setError("Invalid email address.");
       } else if (err.code === "auth/weak-password") {
         setError("Password should be at least 6 characters.");
       } else {
-        setError("Registration failed. Try again.");
+        setError("Registration failed. Please try again.");
       }
     } finally {
       setLoading(false);
@@ -74,76 +83,182 @@ const Register = () => {
 
   return (
     <div style={styles.page}>
-      <div style={styles.card}>
-        <h2 style={styles.title}>Create an Account</h2>
-        <p style={styles.subtitle}>Register as a Villager</p>
+      <style>{`
+        @media (max-width: 480px) {
+        /* 1. Force the content to the top instead of the middle */
+        .register-page-container {
+          align-items: flex-start !important; 
+          padding-top: 10px !important; 
+        }
+
+        .register-card {
+          background: transparent !important;
+          box-shadow: none !important;
+          border: none !important;
+          backdrop-filter: none !important;
+          padding: 1px 10px !important; /* Reduced top padding */
+          margin-top: 60px !important;
+        }
+
+        /* 2. Shrink the header to save vertical space */
+        .register-header {
+          margin-bottom: 15px !important;
+        }
+
+        .register-icon-circle {
+          width: 45px !important; /* Smaller icon */
+          height: 45px !important;
+          margin-bottom: 8px !important;
+        }
+
+        .register-title {
+          font-size: 1.5rem !important; /* Smaller font */
+        }
+
+        .register-input {
+          background: white !important;
+          border: 1px solid #e2e8f0 !important;
+          font-size: 16px !important;
+          padding: 10px 14px 10px 40px !important; /* Slightly thinner inputs */
+        }
+
+        .register-grid {
+          grid-template-columns: 1fr !important;
+          gap: 10px !important; /* Tighter gap between stacked inputs */
+        }
+
+        .background-blobs {
+          display: none;
+        }
+      }
+      `}</style>
+
+      {/* Dynamic Background Elements */}
+      <div className="background-blobs" style={styles.blob1}></div>
+      <div className="background-blobs" style={styles.blob2}></div>
+
+      <div className="register-card" style={styles.card}>
+        <div style={styles.header}>
+          <div style={styles.iconCircle}>
+            <UserPlus size={28} color="#22c55e" />
+          </div>
+          <h2 style={styles.title}>Join SmartPanchayat</h2>
+          <p style={styles.subtitle}>
+            Create your villager profile to access services
+          </p>
+        </div>
+
         <form onSubmit={handleRegister} style={styles.form}>
-          <input
-            type="text"
-            placeholder="Full Name"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            required
-            style={styles.input}
-          />
-          <input
-            type="text"
-            placeholder="Phone Number"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            required
-            style={styles.input}
-          />
-          <input
-            type="number"
-            placeholder="Number of Family Members (excluding you)"
-            value={familyCount}
-            onChange={(e) => setFamilyCount(e.target.value)}
-            required
-            style={styles.input}
-            min={1}
-          />
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            style={styles.input}
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            style={styles.input}
-          />
-          <input
-            type="password"
-            placeholder="Confirm Password"
-            value={confirmPass}
-            onChange={(e) => setConfirmPass(e.target.value)}
-            required
-            style={styles.input}
-          />
+          <div className="register-grid" style={styles.inputGrid}>
+            <div style={styles.inputGroup}>
+              <User size={18} style={styles.inputIcon} color="#64748b" />
+              <input
+                className="register-input"
+                type="text"
+                placeholder="Full Name"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                required
+                style={styles.input}
+              />
+            </div>
+
+            <div style={styles.inputGroup}>
+              <Phone size={18} style={styles.inputIcon} color="#64748b" />
+              <input
+                className="register-input"
+                type="text"
+                placeholder="Phone Number"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                required
+                style={styles.input}
+              />
+            </div>
+          </div>
+
+          <div style={styles.inputGroup}>
+            <Users size={18} style={styles.inputIcon} color="#64748b" />
+            <input
+              className="register-input"
+              type="number"
+              placeholder="Family Members (excluding you)"
+              value={familyCount}
+              onChange={(e) => setFamilyCount(e.target.value)}
+              required
+              style={styles.input}
+              min={0}
+            />
+          </div>
+
+          <div style={styles.inputGroup}>
+            <Mail size={18} style={styles.inputIcon} color="#64748b" />
+            <input
+              className="register-input"
+              type="email"
+              placeholder="Email Address"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              style={styles.input}
+            />
+          </div>
+
+          <div className="register-grid" style={styles.inputGrid}>
+            <div style={styles.inputGroup}>
+              <Lock size={18} style={styles.inputIcon} color="#64748b" />
+              <input
+                className="register-input"
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                style={styles.input}
+              />
+            </div>
+
+            <div style={styles.inputGroup}>
+              <CheckCircle2
+                size={18}
+                style={styles.inputIcon}
+                color="#64748b"
+              />
+              <input
+                className="register-input"
+                type="password"
+                placeholder="Confirm"
+                value={confirmPass}
+                onChange={(e) => setConfirmPass(e.target.value)}
+                required
+                style={styles.input}
+              />
+            </div>
+          </div>
+
+          {error && (
+            <div style={styles.errorContainer}>
+              <AlertCircle size={16} />
+              <span>{error}</span>
+            </div>
+          )}
+
           <button type="submit" style={styles.button} disabled={loading}>
-            {loading ? "Registering..." : "Register"}
+            {loading ? "Creating Account..." : "Create Account"}
           </button>
-          {error && <p style={styles.error}>{error}</p>}
         </form>
 
-        <p style={styles.linkText}>
-          Already have an account?{" "}
-          <Link to="/login" style={styles.link}>
-            Login here
+        <div style={styles.footer}>
+          <p style={styles.linkText}>
+            Already a member?{" "}
+            <Link to="/login" style={styles.link}>
+              Login here
+            </Link>
+          </p>
+          <Link to="/" style={styles.backHome}>
+            <ArrowLeft size={14} /> Back to Home
           </Link>
-        </p>
-        <p style={styles.linkText}>
-          <Link to="/" style={{ ...styles.link, fontSize: "13px" }}>
-            ← Back to Home
-          </Link>
-        </p>
+        </div>
       </div>
     </div>
   );
@@ -154,67 +269,157 @@ const styles = {
     minHeight: "100vh",
     display: "flex",
     justifyContent: "center",
-    alignItems: "center",
-    background: "linear-gradient(135deg, #f0f4ff, #dfe9ff)",
-    fontFamily: "Segoe UI, sans-serif",
+    // alignItems: "center",
+    background: "#f8fafc",
+    backgroundImage: `radial-gradient(at 0% 0%, hsla(142, 76%, 36%, 0.08) 0, transparent 50%), 
+                      radial-gradient(at 100% 100%, hsla(217, 91%, 60%, 0.08) 0, transparent 50%)`,
+    fontFamily: "'Inter', sans-serif",
     padding: "20px",
+    position: "relative",
+    overflow: "hidden",
+  },
+  blob1: {
+    position: "absolute",
+    width: "500px",
+    height: "500px",
+    background: "rgba(34, 197, 94, 0.07)",
+    borderRadius: "50%",
+    filter: "blur(80px)",
+    top: "-150px",
+    right: "-100px",
+    zIndex: 0,
+  },
+  blob2: {
+    position: "absolute",
+    width: "400px",
+    height: "400px",
+    background: "rgba(59, 130, 246, 0.07)",
+    borderRadius: "50%",
+    filter: "blur(80px)",
+    bottom: "-100px",
+    left: "-100px",
+    zIndex: 0,
   },
   card: {
-    backgroundColor: "#ffffff",
-    padding: "35px 30px",
-    borderRadius: "12px",
-    boxShadow: "0 10px 30px rgba(0, 0, 0, 0.1)",
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    backdropFilter: "blur(12px)",
+    padding: "40px",
+    borderRadius: "28px",
+    boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.08)",
     width: "100%",
-    maxWidth: "420px",
+    maxWidth: "500px",
+    zIndex: 1,
+    border: "1px solid rgba(255, 255, 255, 0.7)",
+  },
+  header: {
     textAlign: "center",
+    marginBottom: "30px",
+  },
+  iconCircle: {
+    width: "64px",
+    height: "64px",
+    backgroundColor: "#f0fdf4",
+    borderRadius: "20px",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    margin: "0 auto 16px",
   },
   title: {
-    marginBottom: "8px",
-    fontSize: "26px",
-    fontWeight: 700,
-    color: "#1b1f3a",
+    fontSize: "28px",
+    fontWeight: "800",
+    color: "#0f172a",
+    margin: "0 0 8px",
+    letterSpacing: "-0.5px",
   },
   subtitle: {
-    marginBottom: "25px",
     fontSize: "15px",
-    color: "#555",
+    color: "#64748b",
+    margin: 0,
   },
   form: {
     display: "flex",
     flexDirection: "column",
-    gap: "12px",
+    gap: "16px",
+  },
+  inputGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "16px",
+  },
+  inputGroup: {
+    position: "relative",
+    display: "flex",
+    alignItems: "center",
+    width: "100%",
+  },
+  inputIcon: {
+    position: "absolute",
+    left: "14px",
+    pointerEvents: "none",
+    zIndex: 5,
   },
   input: {
-    padding: "11px",
+    width: "100%",
+    padding: "13px 14px 13px 42px",
     fontSize: "15px",
-    border: "1px solid #ccc",
-    borderRadius: "6px",
+    border: "1.5px solid #e2e8f0",
+    borderRadius: "12px",
     outline: "none",
+    transition: "all 0.2s",
+    backgroundColor: "#f8fafc",
+    boxSizing: "border-box",
+    color: "#1e293b",
   },
   button: {
-    padding: "12px",
-    backgroundColor: "#4caf50",
+    padding: "16px",
+    backgroundColor: "#166534",
+    backgroundImage: "linear-gradient(to right, #166534, #15803d)",
     color: "white",
-    fontWeight: "600",
-    fontSize: "16px",
     border: "none",
-    borderRadius: "6px",
+    borderRadius: "12px",
+    fontSize: "16px",
+    fontWeight: "600",
     cursor: "pointer",
-  },
-  error: {
-    color: "red",
-    fontSize: "14px",
+    transition: "transform 0.2s ease",
     marginTop: "10px",
+    boxShadow: "0 4px 6px -1px rgba(22, 101, 52, 0.2)",
+  },
+  errorContainer: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    backgroundColor: "#fef2f2",
+    color: "#b91c1c",
+    padding: "12px",
+    borderRadius: "10px",
+    fontSize: "13px",
+    border: "1px solid #fecaca",
+  },
+  footer: {
+    marginTop: "24px",
+    textAlign: "center",
+    display: "flex",
+    flexDirection: "column",
+    gap: "12px",
   },
   linkText: {
-    marginTop: "16px",
     fontSize: "14px",
-    color: "#444",
+    color: "#64748b",
   },
   link: {
-    color: "#007bff",
+    color: "#166534",
     textDecoration: "none",
-    fontWeight: "500",
+    fontWeight: "600",
+  },
+  backHome: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "6px",
+    color: "#94a3b8",
+    textDecoration: "none",
+    fontSize: "13px",
   },
 };
 
