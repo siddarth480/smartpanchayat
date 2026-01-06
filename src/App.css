@@ -12,7 +12,7 @@
     animation: App-logo-spin infinite 20s linear;
   }
 }
-
+ 
 .App-header {
   background-color: #282c34;
   min-height: 100vh;
@@ -34,5 +34,18 @@
   }
   to {
     transform: rotate(360deg);
+  }
+}
+/* For mobile screens */
+@media (max-width: 768px) {
+  .services-page {
+    margin-top: 130px !important; /* more top space for mobile */
+  }
+}
+
+/* For laptops/desktops */
+@media (min-width: 769px) {
+  .services-page {
+    margin-top: 110px !important; /* slightly less but still roomy */
   }
 }
