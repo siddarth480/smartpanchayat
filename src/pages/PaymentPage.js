@@ -12,6 +12,7 @@ import {
   ArrowRight,
   History,
 } from "lucide-react";
+import { getFunctions, httpsCallable } from "firebase/functions";
 import { motion } from "framer-motion";
 
 import { auth, db } from "../firebase/firebase";
@@ -235,61 +236,70 @@ const PaymentPage = () => {
     return () => unsubscribe();
   }, [userId]);
 
+  // ... existing imports ...
+
   const handlePaymentInitiation = async (bill) => {
+    if (!window.Razorpay) {
+      setError("Payment gateway not loaded. Please refresh the page.");
+      return;
+    }
+
     setPayingBillId(bill.id);
+    setError(null);
 
     try {
-      // 1. Create a Payment Order on your server (Cloud Function)
-      const response = await fetch(
-        "https://YOUR_CLOUD_FUNCTION_URL/createOrder",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ amount: bill.amount, billId: bill.id }),
-        }
-      );
-      const order = await response.json();
+      const functions = getFunctions(); // Add region if necessary, e.g., getFunctions(undefined, 'asia-south1')
+      const createOrder = httpsCallable(functions, "createOrder");
+      const verifyPayment = httpsCallable(functions, "verifyPayment");
 
-      // 2. Open Razorpay restricted to UPI only
+      // 1. Create Order
+      const orderResponse = await createOrder({
+        amount: bill.amount,
+        billId: bill.id,
+      });
+      const order = orderResponse.data;
+
+      // 2. Open Razorpay
       const options = {
-        key: "YOUR_RAZORPAY_KEY_ID", // Enter your Test/Live Key ID
+        key: "rzp_test_S0uLIRwkoZzK3m",
         amount: order.amount,
         currency: "INR",
         name: "Gram Panchayat",
         description: `Payment for ${bill.billType}`,
         order_id: order.id,
-        // RESTRICT TO UPI ONLY
-        config: {
-          display: {
-            blocks: {
-              upi: {
-                name: "Pay via UPI",
-                instruments: [{ method: "upi" }],
-              },
-            },
-            sequence: ["block.upi"],
-            preferences: { show_default_blocks: false },
-          },
-        },
         handler: async function (response) {
-          // This runs on successful payment
-          alert("Payment Successful! Processing receipt...");
-          // Status will be updated automatically via the Webhook (Step 2)
+          try {
+            await verifyPayment({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              billId: bill.id,
+              appId: appId,
+            });
+            // Note: The onSnapshot listener in your useEffect will
+            // automatically update the UI when Firestore changes.
+            alert("Payment Successful!");
+          } catch (err) {
+            setError("Verification failed. Please contact admin.");
+          }
         },
         prefill: {
-          name: "Villager Name",
-          email: "citizen@example.com",
+          name: "Citizen",
           contact: "9999999999",
         },
         theme: { color: "#4338ca" },
+        modal: {
+          ondismiss: function () {
+            setPayingBillId(null);
+          },
+        },
       };
 
       const rzp = new window.Razorpay(options);
       rzp.open();
     } catch (err) {
-      console.error(err);
-      alert("Could not initiate payment.");
-    } finally {
+      console.error("Payment Error:", err);
+      setError(err.message || "Could not initiate payment.");
       setPayingBillId(null);
     }
   };

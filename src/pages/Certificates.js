@@ -582,7 +582,7 @@ const Certificates = () => {
           Take the first step towards a hassle-free, digital certification
           process.
         </p>
-        <button style={styles.button}>Start Application</button>
+         
       </div>
     </div>
   );

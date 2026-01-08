@@ -8,6 +8,17 @@ import {
   onSnapshot,
   Timestamp,
 } from "firebase/firestore";
+import {
+  FiSend,
+  FiClock,
+  FiCheckCircle,
+  FiFileText,
+  FiImage,
+  FiInfo,
+  FiTrendingUp,
+  FiMapPin,
+} from "react-icons/fi";
+import { MdOutlineErrorOutline } from "react-icons/md";
 
 const CLOUDINARY_UPLOAD_PRESET = "sid111";
 const CLOUDINARY_CLOUD_NAME = "dteguxelm";
@@ -17,7 +28,7 @@ const ComplaintPage = ({ user }) => {
   const [description, setDescription] = useState("");
   const [image, setImage] = useState(null);
   const [uploading, setUploading] = useState(false);
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(null);
   const [complaints, setComplaints] = useState([]);
 
   useEffect(() => {
@@ -27,7 +38,9 @@ const ComplaintPage = ({ user }) => {
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      setComplaints(data);
+      setComplaints(
+        data.sort((a, b) => b.createdAt?.seconds - a.createdAt?.seconds)
+      );
     });
     return unsubscribe;
   }, [user.uid]);
@@ -36,13 +49,13 @@ const ComplaintPage = ({ user }) => {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-    formData.append("cloud_name", CLOUDINARY_CLOUD_NAME);
-
     const res = await fetch(
       `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
-      { method: "POST", body: formData }
+      {
+        method: "POST",
+        body: formData,
+      }
     );
-
     const data = await res.json();
     if (!data.secure_url) throw new Error("Upload failed");
     return data.secure_url;
@@ -51,7 +64,7 @@ const ComplaintPage = ({ user }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setUploading(true);
-    setMessage("");
+    setMessage(null);
 
     try {
       let imageUrl = "";
@@ -71,12 +84,15 @@ const ComplaintPage = ({ user }) => {
         operatorSuggestion: "",
       });
 
-      setMessage("✅ Complaint submitted successfully.");
+      setMessage({
+        type: "success",
+        text: "Complaint submitted successfully.",
+      });
       setDescription("");
       setImage(null);
+      setTimeout(() => setActiveTab("pending"), 1500);
     } catch (err) {
-      console.error("Error submitting complaint:", err);
-      setMessage("❌ Failed to submit complaint.");
+      setMessage({ type: "error", text: "Failed to submit complaint." });
     } finally {
       setUploading(false);
     }
@@ -87,105 +103,109 @@ const ComplaintPage = ({ user }) => {
 
   return (
     <div style={styles.page}>
-      {/* 🌄 Hero Section */}
+      {/* 🚀 Hero Section */}
       <section style={styles.hero}>
-        <div style={styles.heroText}>
-          <h1 style={styles.heroTitle}>Village Complaint Portal</h1>
+        <div style={styles.heroContent}>
+          <div style={styles.badge}>Government Citizen Portal</div>
+          <h1 style={styles.heroTitle}>
+            Your Voice, <br />
+            <span style={styles.accentText}>Our Action.</span>
+          </h1>
           <p style={styles.heroDesc}>
-            Your voice matters! Report local issues directly to the Gram
-            Panchayat for quick action.
+            Empowering villagers to report local infrastructure, sanitation, or
+            utility issues directly to the Gram Panchayat.
           </p>
         </div>
-        <img
-          src="https://cdn-icons-png.flaticon.com/512/10347/10347162.png"
-          alt="village help"
-          style={styles.heroImage}
-        />
-      </section>
-
-      {/* 🌿 Info Section */}
-      <section style={styles.info}>
-        <h2 style={styles.sectionTitle}>Why Use This Portal?</h2>
-        <p style={styles.infoText}>
-          Many issues in villages go unnoticed due to lack of communication.
-          This system bridges the gap between villagers and local authorities.
-          Whether it's a broken light or a sanitation concern — you can raise it
-          in minutes and track its progress.
-        </p>
-      </section>
-
-      {/* ⚙️ Steps Section */}
-      <section style={styles.stepsSection}>
-        <h2 style={styles.sectionTitle}>How It Works</h2>
-        <div style={styles.stepsGrid}>
-          {[
-            {
-              title: "Step 1",
-              text: "Describe the issue and add a photo.",
-              icon: "📝",
-            },
-            {
-              title: "Step 2",
-              text: "Your complaint is sent to the village officials.",
-              icon: "📤",
-            },
-            {
-              title: "Step 3",
-              text: "Track your complaint’s status anytime.",
-              icon: "📊",
-            },
-            {
-              title: "Step 4",
-              text: "Get notified once the issue is resolved.",
-              icon: "✅",
-            },
-          ].map((s, i) => (
-            <div key={i} style={styles.stepCard}>
-              <div style={styles.stepIcon}>{s.icon}</div>
-              <h3 style={styles.stepHeading}>{s.title}</h3>
-              <p style={styles.stepText}>{s.text}</p>
-            </div>
-          ))}
+        <div style={styles.heroGraphic}>
+          <div style={styles.statsCard}>
+            <FiTrendingUp style={{ color: "#10b981" }} />
+            <span>Active Tracking Enabled</span>
+          </div>
+          <img
+            src="https://cdn-icons-png.flaticon.com/512/10347/10347162.png"
+            alt="Portal"
+            style={styles.heroImage}
+          />
         </div>
       </section>
 
-      {/* 🧾 Complaint Tabs */}
-      <div style={styles.tabWrapper}>
-        {["raise", "pending", "resolved"].map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            style={{
-              ...styles.tab,
-              ...(activeTab === tab ? styles.activeTab : {}),
-            }}
-          >
-            {tab === "raise"
-              ? "📝 Raise Complaint"
-              : tab === "pending"
-              ? "⏳ Pending"
-              : "✅ Resolved"}
-          </button>
+      {/* 📊 Progress Section */}
+      <div style={styles.stepsGrid}>
+        {[
+          { icon: <FiFileText />, title: "File", desc: "Report the issue" },
+          { icon: <FiClock />, title: "Review", desc: "Official verification" },
+          { icon: <FiMapPin />, title: "Action", desc: "On-ground resolution" },
+          {
+            icon: <FiCheckCircle />,
+            title: "Closed",
+            desc: "Final verification",
+          },
+        ].map((step, idx) => (
+          <div key={idx} style={styles.stepItem}>
+            <div style={styles.stepIconWrapper}>{step.icon}</div>
+            <div>
+              <h4 style={styles.stepTitle}>{step.title}</h4>
+              <p style={styles.stepDesc}>{step.desc}</p>
+            </div>
+          </div>
         ))}
       </div>
 
-      <div style={styles.contentBox}>
-        {/* Raise Tab */}
+      {/* 🧾 Interaction Tabs */}
+      <div style={styles.tabContainer}>
+        <div style={styles.tabWrapper}>
+          {["raise", "pending", "resolved"].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              style={{
+                ...styles.tab,
+                ...(activeTab === tab ? styles.activeTab : {}),
+              }}
+            >
+              {tab === "raise"
+                ? "Raise Issue"
+                : tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {tab !== "raise" && (
+                <span style={styles.countBadge}>
+                  {tab === "pending" ? pending.length : resolved.length}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={styles.contentSection}>
         {activeTab === "raise" && (
           <form onSubmit={handleSubmit} style={styles.form}>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Describe your issue clearly (e.g., road damage near market)"
-              required
-              style={styles.textarea}
-            />
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => setImage(e.target.files[0])}
-              style={styles.fileInput}
-            />
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Issue Description</label>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Details about the issue (e.g. Broken water pipe near Primary School...)"
+                required
+                style={styles.textarea}
+              />
+            </div>
+
+            <div style={styles.inputGroup}>
+              <label style={styles.label}>Attach Proof (Image)</label>
+              <div style={styles.uploadBox}>
+                <input
+                  type="file"
+                  id="file-upload"
+                  accept="image/*"
+                  onChange={(e) => setImage(e.target.files[0])}
+                  style={styles.fileInput}
+                />
+                <label htmlFor="file-upload" style={styles.fileLabel}>
+                  <FiImage size={20} /> {image ? image.name : "Select Image"}
+                </label>
+              </div>
+            </div>
+
             {image && (
               <div style={styles.previewBox}>
                 <img
@@ -195,77 +215,80 @@ const ComplaintPage = ({ user }) => {
                 />
               </div>
             )}
-            <button type="submit" disabled={uploading} style={styles.button}>
-              {uploading ? "Submitting..." : "Submit Complaint"}
+
+            {message && (
+              <div
+                style={
+                  message.type === "success"
+                    ? styles.successMsg
+                    : styles.errorMsg
+                }
+              >
+                {message.type === "success" ? (
+                  <FiCheckCircle />
+                ) : (
+                  <MdOutlineErrorOutline />
+                )}
+                {message.text}
+              </div>
+            )}
+
+            <button type="submit" disabled={uploading} style={styles.submitBtn}>
+              {uploading ? "Processing..." : "Submit Report"}
+              {!uploading && <FiSend />}
             </button>
-            {message && <p style={styles.message}>{message}</p>}
           </form>
         )}
 
-        {/* Pending Tab */}
-        {activeTab === "pending" && (
-          <div>
-            {pending.length === 0 ? (
-              <p>No pending complaints.</p>
+        {/* Complaint List (Pending/Resolved) */}
+        {activeTab !== "raise" && (
+          <div style={styles.listGrid}>
+            {(activeTab === "pending" ? pending : resolved).length === 0 ? (
+              <div style={styles.emptyState}>
+                <FiInfo size={40} />
+                <p>No {activeTab} complaints found.</p>
+              </div>
             ) : (
-              pending.map((c) => (
-                <div key={c.id} style={styles.card}>
-                  <p>
-                    <strong>Description:</strong> {c.description}
-                  </p>
+              (activeTab === "pending" ? pending : resolved).map((c) => (
+                <div key={c.id} style={styles.complaintCard}>
+                  <div style={styles.cardHeader}>
+                    <span
+                      style={
+                        c.status === "pending"
+                          ? styles.statusPending
+                          : styles.statusResolved
+                      }
+                    >
+                      {c.status}
+                    </span>
+                    <span style={styles.dateText}>
+                      {c.createdAt?.toDate().toLocaleDateString()}
+                    </span>
+                  </div>
+                  <p style={styles.cardDesc}>{c.description}</p>
                   {c.imageUrl && (
                     <img
                       src={c.imageUrl}
-                      alt="complaint"
-                      style={styles.imageThumb}
+                      alt="Proof"
+                      style={styles.cardImage}
                     />
                   )}
-                  <p>
-                    <strong>Status:</strong> {c.status}
-                  </p>
-                  {c.operatorSuggestion && (
-                    <p style={styles.suggestion}>
-                      <strong>Operator Suggestion:</strong>{" "}
-                      {c.operatorSuggestion}
-                    </p>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
-        )}
 
-        {/* Resolved Tab */}
-        {activeTab === "resolved" && (
-          <div>
-            {resolved.length === 0 ? (
-              <p>No resolved complaints.</p>
-            ) : (
-              resolved.map((c) => (
-                <div key={c.id} style={styles.card}>
-                  <p>
-                    <strong>Description:</strong> {c.description}
-                  </p>
-                  {c.imageUrl && (
-                    <img
-                      src={c.imageUrl}
-                      alt="complaint"
-                      style={styles.imageThumb}
-                    />
-                  )}
-                  <p>
-                    <strong>Status:</strong> {c.status}
-                  </p>
                   {c.operatorSuggestion && (
-                    <p style={styles.suggestion}>
-                      <strong>Operator Suggestion:</strong>{" "}
-                      {c.operatorSuggestion}
-                    </p>
+                    <div style={styles.suggestionBox}>
+                      <strong>
+                        <FiInfo /> Operator Note:
+                      </strong>
+                      <p>{c.operatorSuggestion}</p>
+                    </div>
                   )}
                   {c.acknowledgement && (
-                    <p style={{ marginTop: "8px" }}>
-                      <strong>Acknowledgement:</strong> {c.acknowledgement}
-                    </p>
+                    <div style={styles.ackBox}>
+                      <strong>
+                        <FiCheckCircle /> Acknowledgement:
+                      </strong>
+                      <p>{c.acknowledgement}</p>
+                    </div>
                   )}
                 </div>
               ))
@@ -273,152 +296,283 @@ const ComplaintPage = ({ user }) => {
           </div>
         )}
       </div>
-
-      {/* 💡 Tips Section */}
-      <section style={styles.tips}>
-        <h2 style={styles.sectionTitle}>Tips for Effective Complaints</h2>
-        <ul style={styles.tipList}>
-          <li>✅ Be clear and mention the location.</li>
-          <li>📸 Add a photo if possible.</li>
-          <li>💬 Use polite, respectful language.</li>
-          <li>🔔 Check “Pending” or “Resolved” tabs for updates.</li>
-        </ul>
-      </section>
     </div>
   );
 };
 
 const styles = {
   page: {
-    fontFamily: "Segoe UI, sans-serif",
-    padding: "120px 5% 100px 5%", // 100px bottom for mobile
-    backgroundColor: "#f7f9fb",
+    fontFamily: "'Inter', sans-serif",
+    padding: "100px 5% 60px 5%",
+    backgroundColor: "#fcfdfe",
     minHeight: "100vh",
+    color: "#1e293b",
   },
-
   hero: {
     display: "flex",
-    flexWrap: "wrap",
     alignItems: "center",
     justifyContent: "space-between",
-    background: "linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%)",
-    borderRadius: "20px",
-    padding: "30px",
-    marginBottom: "40px",
+    backgroundColor: "#ffffff",
+    borderRadius: "24px",
+    padding: "40px",
+    marginBottom: "30px",
+    boxShadow: "0 10px 30px rgba(0,0,0,0.03)",
+    border: "1px solid #f1f5f9",
+    flexWrap: "wrap",
+    gap: "20px",
   },
-  heroText: { maxWidth: "600px", flex: 1 },
+  heroContent: { flex: 2, minWidth: "300px" },
+  badge: {
+    backgroundColor: "#e0f2fe",
+    color: "#0369a1",
+    padding: "6px 14px",
+    borderRadius: "100px",
+    fontSize: "12px",
+    fontWeight: "600",
+    display: "inline-block",
+    marginBottom: "16px",
+  },
   heroTitle: {
-    fontSize: "clamp(24px, 5vw, 36px)",
-    color: "#1e40af",
-    fontWeight: "700",
-    marginBottom: "10px",
+    fontSize: "clamp(32px, 5vw, 48px)",
+    lineHeight: "1.2",
+    fontWeight: "800",
+    color: "#0f172a",
+    marginBottom: "20px",
   },
-  heroDesc: { fontSize: "16px", color: "#334155" },
-  heroImage: { width: "160px", height: "auto", marginTop: "20px" },
-  info: { textAlign: "center", maxWidth: "800px", margin: "0 auto 40px auto" },
-  infoText: { color: "#475569", fontSize: "16px" },
-  sectionTitle: {
-    textAlign: "center",
-    color: "#1e3a8a",
-    fontWeight: "700",
-    marginBottom: "15px",
+  accentText: {
+    color: "#2563eb",
+    position: "relative",
   },
-  stepsSection: {
+  heroDesc: {
+    fontSize: "18px",
+    color: "#64748b",
+    lineHeight: "1.6",
+    maxWidth: "500px",
+  },
+  heroGraphic: {
+    flex: 1,
+    position: "relative",
+    display: "flex",
+    justifyContent: "center",
+    minWidth: "250px",
+  },
+  heroImage: { width: "200px", height: "auto", zIndex: 1 },
+  statsCard: {
+    position: "absolute",
+    bottom: "10px",
+    right: "0",
     backgroundColor: "#fff",
-    borderRadius: "12px",
-    padding: "30px",
-    marginBottom: "40px",
-    boxShadow: "0 6px 18px rgba(0,0,0,0.05)",
+    padding: "12px 20px",
+    borderRadius: "16px",
+    boxShadow: "0 10px 25px rgba(0,0,0,0.1)",
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    fontSize: "13px",
+    fontWeight: "600",
+    zIndex: 2,
   },
   stepsGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
     gap: "20px",
+    marginBottom: "40px",
   },
-  stepCard: {
-    backgroundColor: "#f8fafc",
-    borderRadius: "10px",
+  stepItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: "15px",
     padding: "20px",
-    textAlign: "center",
-    transition: "transform 0.3s",
+    backgroundColor: "#fff",
+    borderRadius: "16px",
+    border: "1px solid #f1f5f9",
   },
-  stepIcon: { fontSize: "36px" },
-  stepHeading: { marginTop: "10px", fontWeight: "600" },
-  stepText: { fontSize: "14px", color: "#555" },
-  tabWrapper: {
+  stepIconWrapper: {
+    width: "45px",
+    height: "45px",
+    borderRadius: "12px",
+    backgroundColor: "#f1f5f9",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#2563eb",
+    fontSize: "20px",
+  },
+  stepTitle: { fontSize: "15px", fontWeight: "700", margin: 0 },
+  stepDesc: { fontSize: "13px", color: "#64748b", margin: 0 },
+  tabContainer: {
     display: "flex",
     justifyContent: "center",
-    borderRadius: "10px",
-    overflow: "hidden",
-    maxWidth: "800px",
-    margin: "auto",
-    backgroundColor: "#fff",
-    boxShadow: "0 3px 10px rgba(0,0,0,0.05)",
+    marginBottom: "30px",
+  },
+  tabWrapper: {
+    display: "flex",
+    backgroundColor: "#f1f5f9",
+    padding: "6px",
+    borderRadius: "14px",
+    gap: "5px",
   },
   tab: {
-    flex: 1,
-    padding: "14px",
-    fontSize: "15px",
+    padding: "10px 24px",
+    fontSize: "14px",
     fontWeight: "600",
-    backgroundColor: "#f0f0f0",
-    cursor: "pointer",
+    borderRadius: "10px",
     border: "none",
-    transition: "all 0.3s",
+    cursor: "pointer",
+    transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+    color: "#64748b",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    backgroundColor: "transparent",
   },
-  activeTab: { backgroundColor: "#2563eb", color: "#fff" },
-  contentBox: {
-    maxWidth: "800px",
-    margin: "30px auto",
+  activeTab: {
     backgroundColor: "#fff",
-    padding: "25px",
-    borderRadius: "12px",
-    boxShadow: "0 4px 16px rgba(0,0,0,0.06)",
+    color: "#2563eb",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
   },
-  form: { display: "flex", flexDirection: "column", gap: "16px" },
+  countBadge: {
+    backgroundColor: "#e2e8f0",
+    color: "#475569",
+    padding: "2px 8px",
+    borderRadius: "100px",
+    fontSize: "11px",
+  },
+  contentSection: {
+    maxWidth: "800px",
+    margin: "0 auto",
+  },
+  form: {
+    backgroundColor: "#fff",
+    padding: "40px",
+    borderRadius: "24px",
+    boxShadow: "0 10px 40px rgba(0,0,0,0.02)",
+    border: "1px solid #f1f5f9",
+    display: "flex",
+    flexDirection: "column",
+    gap: "25px",
+  },
+  inputGroup: { display: "flex", flexDirection: "column", gap: "10px" },
+  label: { fontSize: "14px", fontWeight: "600", color: "#475569" },
   textarea: {
-    resize: "vertical",
-    minHeight: "100px",
-    padding: "12px",
-    fontSize: "15px",
-    borderRadius: "6px",
-    border: "1px solid #ccc",
+    width: "100%",
+    padding: "15px",
+    borderRadius: "12px",
+    border: "1px solid #e2e8f0",
+    fontSize: "16px",
+    minHeight: "120px",
+    fontFamily: "inherit",
+    outline: "none",
+    transition: "border 0.2s",
+    boxSizing: "border-box",
   },
-  fileInput: { fontSize: "15px" },
-  previewBox: { width: "100%", maxWidth: "220px" },
-  preview: { width: "100%", borderRadius: "8px" },
-  button: {
-    padding: "12px",
+  uploadBox: {
+    border: "2px dashed #e2e8f0",
+    borderRadius: "12px",
+    padding: "20px",
+    textAlign: "center",
+    backgroundColor: "#f8fafc",
+  },
+  fileInput: { display: "none" },
+  fileLabel: {
+    cursor: "pointer",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "10px",
+    color: "#2563eb",
+    fontWeight: "600",
+  },
+  previewBox: { marginTop: "10px", borderRadius: "12px", overflow: "hidden" },
+  preview: { width: "100px", height: "100px", objectFit: "cover" },
+  submitBtn: {
     backgroundColor: "#2563eb",
     color: "#fff",
-    fontWeight: "bold",
-    border: "none",
-    borderRadius: "6px",
-    cursor: "pointer",
-  },
-  message: { color: "#333" },
-  card: {
-    backgroundColor: "#f9f9f9",
     padding: "16px",
-    marginBottom: "16px",
-    borderRadius: "8px",
-    boxShadow: "0 1px 6px rgba(0,0,0,0.06)",
-  },
-  imageThumb: {
-    width: "100%",
-    maxWidth: "160px",
-    borderRadius: "8px",
-    marginTop: "8px",
-  },
-  tips: {
-    backgroundColor: "#e0f2fe",
     borderRadius: "12px",
-    padding: "25px",
-    marginTop: "40px",
-    maxWidth: "800px",
-    marginInline: "auto",
+    border: "none",
+    fontWeight: "700",
+    fontSize: "16px",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "12px",
+    transition: "transform 0.2s",
   },
-  tipList: { listStyle: "none", padding: 0, lineHeight: "1.8em" },
-  suggestion: { color: "#0369a1", fontWeight: "500", marginTop: "8px" },
+  successMsg: {
+    backgroundColor: "#f0fdf4",
+    color: "#166534",
+    padding: "15px",
+    borderRadius: "12px",
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+  },
+  errorMsg: {
+    backgroundColor: "#fef2f2",
+    color: "#991b1b",
+    padding: "15px",
+    borderRadius: "12px",
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+  },
+  listGrid: { display: "flex", flexDirection: "column", gap: "20px" },
+  complaintCard: {
+    backgroundColor: "#fff",
+    padding: "25px",
+    borderRadius: "20px",
+    border: "1px solid #f1f5f9",
+    boxShadow: "0 4px 20px rgba(0,0,0,0.01)",
+  },
+  cardHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    marginBottom: "15px",
+  },
+  statusPending: {
+    color: "#d97706",
+    backgroundColor: "#fffbeb",
+    padding: "4px 12px",
+    borderRadius: "100px",
+    fontSize: "12px",
+    fontWeight: "700",
+    textTransform: "uppercase",
+  },
+  statusResolved: {
+    color: "#059669",
+    backgroundColor: "#ecfdf5",
+    padding: "4px 12px",
+    borderRadius: "100px",
+    fontSize: "12px",
+    fontWeight: "700",
+    textTransform: "uppercase",
+  },
+  dateText: { fontSize: "13px", color: "#94a3b8" },
+  cardDesc: { fontSize: "16px", lineHeight: "1.5", marginBottom: "15px" },
+  cardImage: {
+    width: "100%",
+    maxHeight: "300px",
+    objectFit: "cover",
+    borderRadius: "12px",
+  },
+  suggestionBox: {
+    backgroundColor: "#f0f9ff",
+    padding: "15px",
+    borderRadius: "12px",
+    marginTop: "15px",
+    color: "#0c4a6e",
+    fontSize: "14px",
+  },
+  ackBox: {
+    backgroundColor: "#f0fdf4",
+    padding: "15px",
+    borderRadius: "12px",
+    marginTop: "15px",
+    color: "#14532d",
+    fontSize: "14px",
+  },
+  emptyState: { textAlign: "center", padding: "60px", color: "#94a3b8" },
 };
 
 export default ComplaintPage;

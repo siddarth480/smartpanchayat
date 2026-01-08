@@ -15,10 +15,11 @@ import {
   FaMagic,
   FaDownload,
   FaInfoCircle,
-  FaTrashAlt, // ✅ Added Trash Icon
+  FaTrashAlt,
 } from "react-icons/fa";
 import { useParams } from "react-router-dom";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+
 // Cloudinary Config
 const CLOUDINARY_UPLOAD_PRESET = "sid111";
 const CLOUDINARY_CLOUD_NAME = "dteguxelm";
@@ -66,7 +67,7 @@ const MeetingDashboard = ({ user }) => {
       const docRef = doc(db, "meetings", meetingId);
       await updateDoc(docRef, {
         videoUrl: "",
-        liveSummary: "", // Usually good to clear the summary if the source video is gone
+        liveSummary: "",
         status: "active",
       });
       alert("Video deleted successfully.");
@@ -107,60 +108,35 @@ const MeetingDashboard = ({ user }) => {
   // --- 🤖 AI ANALYSIS LOGIC ---
   const handleAIAnalysis = async () => {
     if (!meetingData.videoUrl) return alert("Please upload a video first.");
-
     setIsAnalyzing(true);
-
     try {
-      // 1. Initialize Gemini (Use your API Key here)
-      const genAI = new GoogleGenerativeAI("AIzaSyD2hKmbwXej3pqSotjIdptgW7g_2dpSuHk");
-       
+      const genAI = new GoogleGenerativeAI(
+        "AIzaSyD2hKmbwXej3pqSotjIdptgW7g_2dpSuHk"
+      );
       const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-
-      // 2. Fetch the video file from Cloudinary and convert to Base64
       const response = await fetch(meetingData.videoUrl);
       const blob = await response.blob();
-
       const reader = new FileReader();
       reader.readAsDataURL(blob);
-
       reader.onloadend = async () => {
         const base64Data = reader.result.split(",")[1];
-
-        const prompt = `
-        Analyze this Panchayat meeting video. 
-        Provide a summary with:
-        1. Main Agenda
-        2. Key Decisions
-        3. Action Items
-        Use ONLY HTML tags (<b>, <ul>, <li>).
-      `;
-
-        // 3. Send to Gemini
+        const prompt = `Analyze this Panchayat meeting video. Provide a summary with: 1. Main Agenda 2. Key Decisions 3. Action Items. Use ONLY HTML tags (<b>, <ul>, <li>).`;
         const result = await model.generateContent([
-          {
-            inlineData: {
-              data: base64Data,
-              mimeType: "video/mp4",
-            },
-          },
+          { inlineData: { data: base64Data, mimeType: "video/mp4" } },
           prompt,
         ]);
-
         const summaryText = result.response.text();
-
-        // 4. Save the result back to Firestore
         const docRef = doc(db, "meetings", meetingId);
         await updateDoc(docRef, {
           liveSummary: summaryText,
           status: "completed",
         });
-
         alert("AI Analysis Complete!");
         setIsAnalyzing(false);
       };
     } catch (err) {
       console.error("Direct AI Error:", err);
-      alert("AI Processing failed. Check console.");
+      alert("AI Processing failed.");
       setIsAnalyzing(false);
     }
   };
@@ -169,14 +145,12 @@ const MeetingDashboard = ({ user }) => {
   const handleToggleRecording = async () => {
     const functions = getFunctions();
     const processSpeech = httpsCallable(functions, "processSpeech");
-
     if (!isRecording) {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: true,
         });
         mediaRecorderRef.current = new MediaRecorder(stream);
-
         mediaRecorderRef.current.ondataavailable = async (event) => {
           if (event.data.size > 0) {
             const reader = new FileReader();
@@ -198,7 +172,6 @@ const MeetingDashboard = ({ user }) => {
             };
           }
         };
-
         mediaRecorderRef.current.start(10000);
         setIsRecording(true);
       } catch (err) {
@@ -223,10 +196,11 @@ const MeetingDashboard = ({ user }) => {
       <style>
         {`
           @media (max-width: 768px) {
-            .header-content { flex-direction: column !important; align-items: flex-start !important; gap: 20px; }
-            .action-group { width: 100%; flex-direction: column !important; }
+            .header-content { flex-direction: column !important; align-items: flex-start !important; gap: 20px; padding: 20px !important; }
+            .action-group { width: 100%; flex-wrap: wrap; justify-content: flex-start !important; }
             .meeting-grid { grid-template-columns: 1fr !important; }
-            .info-strip { overflow-x: auto; white-space: nowrap; }
+            .info-strip { flex-wrap: wrap; gap: 15px !important; }
+            .card-padding { padding: 20px !important; }
           }
         `}
       </style>
@@ -246,7 +220,7 @@ const MeetingDashboard = ({ user }) => {
 
           <div
             className="action-group"
-            style={{ display: "flex", gap: "10px" }}
+            style={{ display: "flex", gap: "10px", justifyContent: "flex-end" }}
           >
             {role === "operator" && (
               <>
@@ -259,7 +233,6 @@ const MeetingDashboard = ({ user }) => {
                       {isRecording ? <FaStop /> : <FaMicrophone />}{" "}
                       {isRecording ? "Stop" : "Live Stream"}
                     </button>
-
                     <label style={uploadBtn}>
                       <FaCloudUploadAlt />{" "}
                       {isUploading ? "Uploading..." : "Upload Video"}
@@ -282,16 +255,16 @@ const MeetingDashboard = ({ user }) => {
                       <FaMagic />{" "}
                       {isAnalyzing ? "AI Analyzing..." : "AI Summarize Video"}
                     </button>
-                    {/* ✅ New Delete Button */}
                     <button onClick={handleDeleteVideo} style={deleteBtn}>
-                      <FaTrashAlt /> Delete Video
+                      <FaTrashAlt /> Delete
                     </button>
                   </>
                 )}
               </>
             )}
 
-            {meetingData.videoUrl && (
+            {/* Show Recording Download only if Video exists AND user is Operator */}
+            {meetingData.videoUrl && role === "operator" && (
               <a
                 href={meetingData.videoUrl}
                 target="_blank"
@@ -320,12 +293,18 @@ const MeetingDashboard = ({ user }) => {
           </div>
         </div>
 
-        <div className="meeting-grid" style={gridStyle(role)}>
-          <section style={cardStyle}>
+        <div className="meeting-grid" style={gridStyle}>
+          {/* Section 1: Transcript (Villagers see this, Operators see Video+Transcript) */}
+          <section className="card-padding" style={cardStyle}>
             <h3 style={cardHeading}>
-              <FaVideo /> Meeting Recording & Transcript
+              <FaFileAlt />{" "}
+              {role === "operator"
+                ? "Meeting Recording & Transcript"
+                : "Meeting Transcript"}
             </h3>
-            {meetingData.videoUrl ? (
+
+            {/* VIDEO HIDDEN FOR VILLAGERS */}
+            {role === "operator" && meetingData.videoUrl && (
               <div style={videoBox}>
                 <video
                   src={meetingData.videoUrl}
@@ -336,23 +315,26 @@ const MeetingDashboard = ({ user }) => {
                     border: "1px solid #e2e8f0",
                   }}
                 />
-                <div style={{ marginTop: "20px" }}>
-                  <h4 style={{ fontSize: "14px", color: "#1e293b" }}>
-                    Live Transcript Backup:
-                  </h4>
-                  <p style={transcriptBody}>
-                    {meetingData.transcript || "No transcript available."}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div style={transcriptBody}>
-                {meetingData.transcript || "discussion has not started..."}
               </div>
             )}
+
+            <div
+              style={{
+                marginTop:
+                  role === "operator" && meetingData.videoUrl ? "20px" : "0px",
+              }}
+            >
+              <p style={transcriptBody}>
+                {meetingData.transcript || "Discussion has not started yet..."}
+              </p>
+            </div>
           </section>
 
-          <section style={{ ...cardStyle, borderTop: "5px solid #2563eb" }}>
+          {/* Section 2: AI Summary */}
+          <section
+            className="card-padding"
+            style={{ ...cardStyle, borderTop: "5px solid #2563eb" }}
+          >
             <div
               style={{
                 display: "flex",
@@ -390,13 +372,13 @@ const MeetingDashboard = ({ user }) => {
   );
 };
 
-// --- STYLES ---
+// --- STYLES (Keep original look, add responsive logic) ---
 const containerStyle = {
   background: "#f8fafc",
   minHeight: "100vh",
-  padding: "120px 20px 60px",
+  padding: "40px 20px",
 };
-const contentWrapper = { maxWidth: "1250px", margin: "0 auto" };
+const contentWrapper = { maxWidth: "1250px", margin: "80px auto" };
 const headerStyle = {
   display: "flex",
   justifyContent: "space-between",
@@ -457,6 +439,12 @@ const startBtn = {
 const stopBtn = { ...startBtn, background: "#ef4444" };
 const uploadBtn = { ...startBtn, background: "#64748b" };
 const aiBtn = { ...startBtn, background: "#8b5cf6" };
+const deleteBtn = {
+  ...startBtn,
+  background: "transparent",
+  color: "#ef4444",
+  border: "1px solid #ef4444",
+};
 const downloadBtn = {
   ...startBtn,
   background: "#f8fafc",
@@ -478,17 +466,17 @@ const infoItem = {
   color: "#475569",
   fontWeight: "600",
 };
-const gridStyle = (role) => ({
+const gridStyle = {
   display: "grid",
-  gridTemplateColumns: role === "villager" ? "1fr" : "1fr 1.5fr",
+  gridTemplateColumns: "repeat(auto-fit, minmax(350px, 1fr))",
   gap: "25px",
-});
+};
 const cardStyle = {
   background: "#ffffff",
   borderRadius: "20px",
   padding: "35px",
   border: "1px solid #e2e8f0",
-  minHeight: "650px",
+  minHeight: "500px",
   boxShadow: "0 10px 15px -3px rgba(0,0,0,0.04)",
 };
 const videoBox = {
@@ -504,13 +492,13 @@ const cardHeading = {
   display: "flex",
   alignItems: "center",
   gap: "12px",
+  marginBottom: "15px",
 };
 const transcriptBody = {
   fontSize: "15px",
   lineHeight: "1.8",
   color: "#475569",
   whiteSpace: "pre-wrap",
-  marginTop: "15px",
 };
 const summaryBody = {
   fontSize: "16px",
@@ -532,21 +520,6 @@ const emptyState = {
   padding: "120px 0",
   color: "#94a3b8",
 };
-const verifyActionBtn = {
-  marginTop: "30px",
-  width: "100%",
-  background: "#10b981",
-  color: "white",
-  padding: "16px",
-  borderRadius: "10px",
-  border: "none",
-  fontWeight: "800",
-  cursor: "pointer",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  gap: "12px",
-};
 const loaderStyle = {
   display: "flex",
   justifyContent: "center",
@@ -555,14 +528,6 @@ const loaderStyle = {
   color: "#64748b",
   fontSize: "18px",
   fontWeight: "600",
-};
-
-// ✅ Added Delete Button Style
-const deleteBtn = {
-  ...startBtn,
-  background: "transparent",
-  color: "#ef4444",
-  border: "1px solid #ef4444",
 };
 
 export default MeetingDashboard;

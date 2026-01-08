@@ -69,6 +69,11 @@ import VillagerGarbage from "./pages/VillagerGarbage";
 import OperatorGarbage from "./pages/OperatorGarbage";
 import MemberGarbage from "./pages/MemberGarbage";
 
+// Polls Module
+import VillagerPolls from "./pages/VillagerPolls";
+import OperatorPollCreator from "./pages/OperatorPollCreator";
+import MemberPollResults from "./pages/MemberPollResults";
+
 import { auth, db } from "./firebase/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
@@ -138,6 +143,10 @@ function AppWrapper() {
     else if (path === "/budget") title = "Village Budget";
     else if (path === "/budget/manage") title = "Manage Budget";
     else if (path === "/budget/approval") title = "Budget Approval";
+    // ===== POLLS =====
+    else if (path === "/services/polls") title = "Democratic Polls";
+    else if (path === "/operator/create-poll") title = "Manage Polls";
+    else if (path === "/member/poll-results") title = "Poll Analytics";
 
     document.title = `${title} | Smart Panchayat`;
   }, [location]);
@@ -547,6 +556,44 @@ function AppWrapper() {
               <BudgetApproval user={user} />
             ) : (
               <Navigate to="/login" />
+            )
+          }
+        />
+
+        {/* 🗳️ Democratic Polls Module */}
+
+        {/* Villager: Voting Page */}
+        <Route
+          path="/services/polls"
+          element={
+            user && user.role === "villager" ? (
+              <VillagerPolls user={user} />
+            ) : (
+              <Navigate to="/" />
+            )
+          }
+        />
+
+        {/* Operator: Create & Manage Polls */}
+        <Route
+          path="/operator/create-poll"
+          element={
+            user && user.role === "operator" ? (
+              <OperatorPollCreator user={user} />
+            ) : (
+              <Navigate to="/" />
+            )
+          }
+        />
+
+        {/* Member: View Analytics/Results */}
+        <Route
+          path="/member/poll-results"
+          element={
+            user && user.role === "member" ? (
+              <MemberPollResults user={user} />
+            ) : (
+              <Navigate to="/" />
             )
           }
         />

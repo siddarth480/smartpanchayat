@@ -9,6 +9,7 @@ import {
   FaTrash,
   FaComments,
   FaArrowRight,
+  FaVoteYea,
 } from "react-icons/fa";
 
 const Services = ({ user }) => {
@@ -49,6 +50,12 @@ const Services = ({ user }) => {
       villager: "/schemes",
       operator: "/operator/schemes",
       member: "/member/schemes",
+    },
+
+    polls: {
+      villager: "/services/polls",
+      operator: "/operator/create-poll",
+      member: "/member/poll-results",
     },
     events: {
       villager: "/services/events",
@@ -144,6 +151,14 @@ const Services = ({ user }) => {
         icon: <FaComments />,
         color: "#8b5cf6",
       },
+
+      {
+        key: "polls",
+        title: "Democratic Polls",
+        desc: "Vote on village development projects and community decisions.",
+        icon: <FaVoteYea />,
+        color: "#ef4444",
+      },
     ],
     operator: [
       {
@@ -195,6 +210,13 @@ const Services = ({ user }) => {
         icon: <FaComments />,
         color: "#8b5cf6",
       },
+      {
+        key: "polls",
+        title: "Manage Polls",
+        desc: "Create new community polls and set voting dates.",
+        icon: <FaVoteYea />,
+        color: "#ef4444",
+      },
     ],
     member: [
       {
@@ -238,6 +260,13 @@ const Services = ({ user }) => {
         desc: "Access live meeting transcripts and AI decisions.",
         icon: <FaComments />,
         color: "#8b5cf6",
+      },
+      {
+        key: "polls",
+        title: "Poll Analytics",
+        desc: "View community consensus and live voting results.",
+        icon: <FaVoteYea />,
+        color: "#ef4444",
       },
     ],
     expert: [
