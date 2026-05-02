@@ -8,8 +8,7 @@ import {
   arrayUnion,
   increment,
 } from "firebase/firestore";
-import {
-  FiClock,
+import { 
   FiCheckCircle,
   FiThumbsUp,
   FiThumbsDown,

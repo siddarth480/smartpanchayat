@@ -11,7 +11,6 @@ import {
   FaLock,
   FaCheckCircle,
   FaExclamationCircle,
-  FaBars,
 } from "react-icons/fa";
 
 const Settings = () => {

@@ -80,7 +80,6 @@ const SearchFamily = () => {
     }
   };
 
-  // Header text based on active role
   const getHeaderText = () => {
     if (activeRole === "villager") return "Villager Directory - Search by Family Code";
     if (activeRole === "operator") return "Operator Directory - Search by Email";
@@ -90,19 +89,17 @@ const SearchFamily = () => {
 
   return (
     <div style={styles.container}>
-      {/* Header */}
       <div style={styles.header}>
         <h1 style={styles.title}>{getHeaderText()}</h1>
       </div>
 
-      {/* Role Tabs */}
       <div style={styles.tabs}>
         {roles.map((role) => (
           <button
             key={role}
             onClick={() => {
               setActiveRole(role);
-              setFamilyCode(""); 
+              setFamilyCode("");
               setFilteredUsers(users.filter((u) => u.role === role));
               setError("");
             }}
@@ -116,7 +113,6 @@ const SearchFamily = () => {
         ))}
       </div>
 
-      {/* Search Bar */}
       <div style={styles.searchBar}>
         <input
           type="text"
@@ -131,22 +127,15 @@ const SearchFamily = () => {
           onChange={(e) => {
             const value = e.target.value;
             setFamilyCode(value);
-
             let filtered = users.filter((user) => user.role === activeRole);
             if (value.trim()) {
               filtered = filtered.filter((user) => {
                 if (activeRole === "villager") {
-                  return user.familyCode
-                    ?.toLowerCase()
-                    .includes(value.trim().toLowerCase());
+                  return user.familyCode?.toLowerCase().includes(value.trim().toLowerCase());
                 } else if (activeRole === "operator") {
-                  return user.email
-                    ?.toLowerCase()
-                    .includes(value.trim().toLowerCase());
+                  return user.email?.toLowerCase().includes(value.trim().toLowerCase());
                 } else if (activeRole === "expert") {
-                  return user.fullName
-                    ?.toLowerCase()
-                    .includes(value.trim().toLowerCase());
+                  return user.fullName?.toLowerCase().includes(value.trim().toLowerCase());
                 }
                 return false;
               });
@@ -161,7 +150,9 @@ const SearchFamily = () => {
         </button>
       </div>
 
-      {/* Users Grid */}
+      {/* Error Display */}
+      {error && <p style={styles.errorMessage}>{error}</p>}
+
       {loading ? (
         <p style={styles.centerText}>Loading...</p>
       ) : filteredUsers.length === 0 ? (
@@ -175,26 +166,13 @@ const SearchFamily = () => {
                 <span style={styles.role}>{user.role.toUpperCase()}</span>
               </div>
               <div style={styles.cardBody}>
-                <p>
-                  <strong>Family Code:</strong> {user.familyCode || "NA"}
-                </p>
-                <p>
-                  <strong>Email:</strong> {user.email || "NA"}
-                </p>
-                <p>
-                  <strong>Phone:</strong> {user.phone || "NA"}
-                </p>
-                <p>
-                  <strong>Gender:</strong> {user.gender || "NA"}
-                </p>
-                <p>
-                  <strong>Age:</strong> {user.age || "NA"}
-                </p>
+                <p><strong>Family Code:</strong> {user.familyCode || "NA"}</p>
+                <p><strong>Email:</strong> {user.email || "NA"}</p>
+                <p><strong>Phone:</strong> {user.phone || "NA"}</p>
+                <p><strong>Gender:</strong> {user.gender || "NA"}</p>
+                <p><strong>Age:</strong> {user.age || "NA"}</p>
                 {user.role === "villager" && user.familyId && (
-                  <button
-                    style={styles.familyBtn}
-                    onClick={() => viewFamilyMembers(user)}
-                  >
+                  <button style={styles.familyBtn} onClick={() => viewFamilyMembers(user)}>
                     View Family Members
                   </button>
                 )}
@@ -204,22 +182,12 @@ const SearchFamily = () => {
         </div>
       )}
 
-      {/* Modal */}
       {modalOpen && selectedFamily && (
         <div style={styles.modalOverlay}>
           <div style={styles.modal}>
             <div style={styles.modalHeader}>
               <h3>{selectedFamily.fullName}'s Family Members</h3>
-              <button
-                style={styles.closeIcon}
-                onClick={() => {
-                  setModalOpen(false);
-                  setFamilyMembers([]);
-                  setSelectedFamily(null);
-                }}
-              >
-                ×
-              </button>
+              <button style={styles.closeIcon} onClick={() => { setModalOpen(false); setFamilyMembers([]); setSelectedFamily(null); }}>×</button>
             </div>
             <div style={styles.modalBody}>
               {familyMembers.length === 0 ? (
@@ -227,9 +195,7 @@ const SearchFamily = () => {
               ) : (
                 familyMembers.map((m) => (
                   <div key={m.id} style={styles.memberCard}>
-                    <p>
-                      <strong>{m.fullName}</strong> ({m.relation})
-                    </p>
+                    <p><strong>{m.fullName}</strong> ({m.relation})</p>
                     <p>Email: {m.email || "NA"}</p>
                     <p>Phone: {m.phone || "NA"}</p>
                     <p>Gender: {m.gender || "NA"}</p>
@@ -238,16 +204,7 @@ const SearchFamily = () => {
                 ))
               )}
             </div>
-            <button
-              style={styles.closeBtn}
-              onClick={() => {
-                setModalOpen(false);
-                setFamilyMembers([]);
-                setSelectedFamily(null);
-              }}
-            >
-              Close
-            </button>
+            <button style={styles.closeBtn} onClick={() => { setModalOpen(false); setFamilyMembers([]); setSelectedFamily(null); }}>Close</button>
           </div>
         </div>
       )}
@@ -256,160 +213,30 @@ const SearchFamily = () => {
 };
 
 const styles = {
-  container: {
-    minHeight: "100vh",
-    background: "#f4f7fa",
-    padding: "80px 20px 40px 20px",
-    fontFamily: "'Segoe UI', sans-serif",
-  },
+  container: { minHeight: "100vh", background: "#f4f7fa", padding: "80px 20px 40px 20px", fontFamily: "'Segoe UI', sans-serif" },
   header: { textAlign: "center", marginBottom: "25px" },
   title: { fontSize: "28px", color: "#1f3c88", fontWeight: 700 },
-  tabs: {
-    display: "flex",
-    justifyContent: "center",
-    gap: "12px",
-    marginBottom: "25px",
-    flexWrap: "wrap",
-  },
-  tab: {
-    padding: "10px 20px",
-    borderRadius: "50px",
-    border: "1px solid #1f3c88",
-    background: "#fff",
-    color: "#1f3c88",
-    cursor: "pointer",
-    fontWeight: 600,
-    transition: "all 0.3s ease",
-    minWidth: "100px",
-    textAlign: "center",
-  },
-  activeTab: {
-    background: "#1f3c88",
-    color: "#fff",
-    boxShadow: "0 6px 15px rgba(0,0,0,0.15)",
-  },
-  searchBar: {
-    display: "flex",
-    justifyContent: "center",
-    marginBottom: "30px",
-    gap: "12px",
-    flexWrap: "wrap",
-  },
-  input: {
-    width: "280px",
-    maxWidth: "100%",
-    padding: "12px 16px",
-    borderRadius: "12px",
-    border: "1px solid #ccc",
-    fontSize: "15px",
-    outline: "none",
-  },
-  button: {
-    padding: "12px 24px",
-    border: "none",
-    borderRadius: "12px",
-    backgroundColor: "#1f3c88",
-    color: "#fff",
-    fontWeight: 600,
-    cursor: "pointer",
-    transition: "all 0.3s ease",
-  },
-  familyBtn: {
-    marginTop: "12px",
-    padding: "10px 16px",
-    border: "none",
-    borderRadius: "12px",
-    backgroundColor: "#28a745",
-    color: "#fff",
-    cursor: "pointer",
-    fontWeight: 600,
-    transition: "all 0.2s ease",
-  },
+  tabs: { display: "flex", justifyContent: "center", gap: "12px", marginBottom: "25px", flexWrap: "wrap" },
+  tab: { padding: "10px 20px", borderRadius: "50px", border: "1px solid #1f3c88", background: "#fff", color: "#1f3c88", cursor: "pointer", fontWeight: 600, transition: "all 0.3s ease", minWidth: "100px", textAlign: "center" },
+  activeTab: { background: "#1f3c88", color: "#fff", boxShadow: "0 6px 15px rgba(0,0,0,0.15)" },
+  searchBar: { display: "flex", justifyContent: "center", marginBottom: "10px", gap: "12px", flexWrap: "wrap" },
+  errorMessage: { color: "#dc3545", textAlign: "center", marginBottom: "20px", fontWeight: "bold" }, // Added style
+  input: { width: "280px", maxWidth: "100%", padding: "12px 16px", borderRadius: "12px", border: "1px solid #ccc", fontSize: "15px", outline: "none" },
+  button: { padding: "12px 24px", border: "none", borderRadius: "12px", backgroundColor: "#1f3c88", color: "#fff", fontWeight: 600, cursor: "pointer", transition: "all 0.3s ease" },
+  familyBtn: { marginTop: "12px", padding: "10px 16px", border: "none", borderRadius: "12px", backgroundColor: "#28a745", color: "#fff", cursor: "pointer", fontWeight: 600, transition: "all 0.2s ease" },
   centerText: { textAlign: "center", marginTop: "50px" },
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-    gap: "20px",
-  },
-  card: {
-    background: "#fff",
-    borderRadius: "16px",
-    boxShadow: "0 6px 20px rgba(0,0,0,0.1)",
-    padding: "20px",
-    transition: "all 0.3s ease",
-  },
-  cardHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "12px",
-  },
-  role: {
-    background: "#1f3c88",
-    color: "#fff",
-    padding: "4px 10px",
-    borderRadius: "12px",
-    fontSize: "12px",
-    fontWeight: 600,
-  },
+  grid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" },
+  card: { background: "#fff", borderRadius: "16px", boxShadow: "0 6px 20px rgba(0,0,0,0.1)", padding: "20px", transition: "all 0.3s ease" },
+  cardHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px" },
+  role: { background: "#1f3c88", color: "#fff", padding: "4px 10px", borderRadius: "12px", fontSize: "12px", fontWeight: 600 },
   cardBody: { lineHeight: "1.6", color: "#333" },
-  modalOverlay: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: "100%",
-    backgroundColor: "rgba(0,0,0,0.5)",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: "20px",
-    zIndex: 9999,
-  },
-  modal: {
-    backgroundColor: "#fff",
-    borderRadius: "16px",
-    width: "100%",
-    maxWidth: "520px",
-    maxHeight: "80vh",
-    overflowY: "auto",
-    padding: "24px",
-    position: "relative",
-    boxShadow: "0 8px 25px rgba(0,0,0,0.2)",
-  },
-  modalHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "18px",
-  },
+  modalOverlay: { position: "fixed", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "rgba(0,0,0,0.5)", display: "flex", justifyContent: "center", alignItems: "center", padding: "20px", zIndex: 9999 },
+  modal: { backgroundColor: "#fff", borderRadius: "16px", width: "100%", maxWidth: "520px", maxHeight: "80vh", overflowY: "auto", padding: "24px", position: "relative", boxShadow: "0 8px 25px rgba(0,0,0,0.2)" },
+  modalHeader: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" },
   modalBody: { maxHeight: "60vh", overflowY: "auto" },
-  memberCard: {
-    border: "1px solid #ddd",
-    borderRadius: "12px",
-    padding: "14px",
-    marginBottom: "14px",
-    backgroundColor: "#fafafa",
-  },
-  closeBtn: {
-    marginTop: "16px",
-    padding: "12px 16px",
-    backgroundColor: "#dc3545",
-    color: "#fff",
-    border: "none",
-    borderRadius: "12px",
-    cursor: "pointer",
-    width: "100%",
-    fontWeight: 600,
-  },
-  closeIcon: {
-    fontSize: "24px",
-    background: "none",
-    border: "none",
-    cursor: "pointer",
-    color: "#555",
-    fontWeight: "bold",
-  },
+  memberCard: { border: "1px solid #ddd", borderRadius: "12px", padding: "14px", marginBottom: "14px", backgroundColor: "#fafafa" },
+  closeBtn: { marginTop: "16px", padding: "12px 16px", backgroundColor: "#dc3545", color: "#fff", border: "none", borderRadius: "12px", cursor: "pointer", width: "100%", fontWeight: 600 },
+  closeIcon: { fontSize: "24px", background: "none", border: "none", cursor: "pointer", color: "#555", fontWeight: "bold" },
 };
 
 export default SearchFamily;
