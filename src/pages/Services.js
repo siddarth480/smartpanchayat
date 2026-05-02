@@ -295,76 +295,10 @@ const Services = ({ user }) => {
         background: "#f8fafc",
         minHeight: "100vh",
         fontFamily: "'Inter', sans-serif",
+        marginTop: "70px",
       }}
     >
-      {/* --- BALANCED HERO SECTION (55vh) --- */}
-      <div
-        style={{
-          position: "relative",
-          height: "55vh",
-          minHeight: "400px",
-          overflow: "hidden",
-          marginTop: "70px",
-        }}
-      >
-        <AnimatePresence mode="wait">
-          <motion.img
-            key={slides[current].src}
-            src={slides[current].src}
-            initial={{ opacity: 0, scale: 1.05 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 1 }}
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              position: "absolute",
-            }}
-          />
-        </AnimatePresence>
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            background:
-              "linear-gradient(to bottom, rgba(15,23,42,0.2), rgba(15,23,42,0.8))",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
-            alignItems: "center",
-            color: "white",
-            textAlign: "center",
-            padding: "0 20px",
-          }}
-        >
-          <motion.h1
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            style={{
-              fontSize: "clamp(2rem, 6vw, 3.5rem)",
-              fontWeight: "900",
-              marginBottom: "15px",
-            }}
-          >
-            {slides[current].title}
-          </motion.h1>
-          <motion.p
-            initial={{ y: 15, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.2 }}
-            style={{
-              fontSize: "clamp(0.9rem, 2.5vw, 1.2rem)",
-              maxWidth: "700px",
-              opacity: 0.9,
-              fontWeight: "300",
-            }}
-          >
-            {slides[current].subtitle}
-          </motion.p>
-        </div>
-      </div>
-
+      
       {/* --- DASHBOARD CONTENT --- */}
       <main
         style={{

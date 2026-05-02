@@ -16,7 +16,7 @@ import {
   FiBarChart2,
   FiInfo,
   FiChevronRight,
-  FiLock, // Added lock icon
+  FiLock,
 } from "react-icons/fi";
 
 const VillagerPolls = ({ user }) => {

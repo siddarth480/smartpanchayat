@@ -18,8 +18,7 @@ import {
   MdOutlineUploadFile,
   MdEventNote,
   MdPostAdd,
-} from "react-icons/md";
-import Logo from "../assets/logo.png";
+} from "react-icons/md"; 
 
 const Navbar = ({ user, onLogout }) => {
   const navigate = useNavigate();
@@ -299,7 +298,7 @@ const Navbar = ({ user, onLogout }) => {
           <nav style={styles.navbar}>
             {/* Logo */}
             <div style={styles.logoContainer} onClick={() => navigate("/")}>
-              <img src={Logo} alt="Logo" style={styles.logoImage} />
+              <img src={"/logo.png"} alt="Logo" style={styles.logoImage} />
             </div>
 
             {/* Center links */}

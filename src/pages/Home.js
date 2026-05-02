@@ -13,8 +13,7 @@ import {
   Mail,
   Phone,
   MapPin,
-} from "lucide-react";
-import heroImage from "../assets/hero-village.png";
+} from "lucide-react"; 
 
 const Home = () => {
   const navigate = useNavigate();
@@ -209,7 +208,7 @@ const Home = () => {
               className="hero-image-container"
               style={styles.heroImageContainer}
             >
-              <img src={heroImage} alt="Hero" style={styles.heroImage} />
+              <img src={"/hero-village.png"} alt="Hero" style={styles.heroImage} />
             </div>
           </div>
         </div>

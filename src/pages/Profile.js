@@ -12,7 +12,12 @@ import {
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
-import { User, Plus, Save, Users, Phone, Mail, UserCheck } from "lucide-react";
+import { 
+  User, Plus, Save, Users, Phone, Mail, 
+  UserCheck, MapPin, UploadCloud, FileText,
+  Briefcase, Calendar, CreditCard, Droplet
+} from "lucide-react";
+import "./Profile.css"; // ✅ Import the new CSS
 
 const CLOUDINARY_UPLOAD_PRESET = "sid111";
 const CLOUDINARY_CLOUD_NAME = "dteguxelm";
@@ -50,7 +55,6 @@ const Profile = () => {
 
           // Pre-fill editable fields only for villager
           if (data.role === "villager") {
-            // Inside useEffect under if (data.role === "villager")
             setEditData({
               occupation: data.occupation || "",
               gender: data.gender || "",
@@ -59,7 +63,7 @@ const Profile = () => {
               income: data.income || "",
               caste: data.caste || "",
               area: data.area || "",
-              aadhaar: data.aadhaar || "", // ✅ Add this line
+              aadhaar: data.aadhaar || "",
             });
 
             setDocURLs({
@@ -89,7 +93,9 @@ const Profile = () => {
 
   const handleFileChange = (e) => {
     const { name, files } = e.target;
-    setDocuments((prev) => ({ ...prev, [name]: files[0] }));
+    if (files && files.length > 0) {
+      setDocuments((prev) => ({ ...prev, [name]: files[0] }));
+    }
   };
 
   const uploadToCloudinary = async (file) => {
@@ -109,47 +115,67 @@ const Profile = () => {
 
   const validate = () => {
     const newErrors = {};
-    if (!editData.occupation) newErrors.occupation = "Occupation is required";
+    const occupationVal = editData.occupation?.trim();
+    if (!occupationVal) {
+      newErrors.occupation = "Occupation is required";
+    } else if (!/^[a-zA-Z\s]{3,50}$/.test(occupationVal)) {
+      newErrors.occupation = "Must be 3-50 letters/spaces only";
+    }
     if (!editData.gender) newErrors.gender = "Gender is required";
     if (!editData.dob) newErrors.dob = "Date of Birth is required";
-    if (!editData.age || isNaN(editData.age)) newErrors.age = "Enter valid age";
-    if (!editData.income || isNaN(editData.income))
-      newErrors.income = "Enter valid income";
-    if (!editData.caste) newErrors.caste = "Caste is required";
+    
+    if (!editData.age || isNaN(editData.age) || Number(editData.age) <= 0 || Number(editData.age) > 120) {
+      newErrors.age = "Enter a valid age (1-120)";
+    }
+    
+    if (!editData.income || isNaN(editData.income) || Number(editData.income) < 0) {
+      newErrors.income = "Enter a valid income";
+    }
+    
+    if (!editData.caste?.trim()) newErrors.caste = "Caste is required";
 
-    // ✅ ADD THIS LINE HERE
-    if (!editData.area)
-      newErrors.area =
-        "Area/Ward is required for services like Garbage Management";
+    if (!editData.area) {
+      newErrors.area = "Area/Ward is required for services like Garbage Management";
+    }
 
     if (!editData.aadhaar || !/^\d{12}$/.test(editData.aadhaar)) {
       newErrors.aadhaar = "Valid 12-digit Aadhaar number is required";
     }
+    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const validateMember = () => {
     const errors = {};
-    if (!editMemberData.fullName) errors.fullName = "Name is required";
-    if (!editMemberData.relation) errors.relation = "Relation is required";
+    if (!editMemberData.fullName?.trim()) errors.fullName = "Name is required";
+    if (!editMemberData.relation?.trim()) errors.relation = "Relation is required";
+    
     if (
-      !editMemberData.email ||
+      editMemberData.email &&
       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editMemberData.email)
     ) {
       errors.email = "Valid email required";
     }
-    if (!editMemberData.phone || !/^[0-9]{10}$/.test(editMemberData.phone)) {
+    
+    if (
+      editMemberData.phone &&
+      !/^\d{10}$/.test(editMemberData.phone)
+    ) {
       errors.phone = "Valid 10-digit phone number required";
     }
+    
     if (!editMemberData.gender) errors.gender = "Gender is required";
+    
     if (
       !editMemberData.age ||
       isNaN(editMemberData.age) ||
-      editMemberData.age <= 0
+      Number(editMemberData.age) <= 0 ||
+      Number(editMemberData.age) > 120
     ) {
-      errors.age = "Valid age required";
+      errors.age = "Enter a valid age (1-120)";
     }
+    
     setMemberErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -204,282 +230,334 @@ const Profile = () => {
 
   if (!userData) {
     return (
-      <div style={styles.loadingContainer}>
-        <div style={styles.spinner}></div>
-        <p>Loading Profile...</p>
+      <div className="loading-screen">
+        <div className="spinner-modern"></div>
+        <p>Loading your profile...</p>
       </div>
     );
   }
 
   return (
-    <div style={styles.page}>
-      <div style={styles.container}>
-        {/* ✅ Profile Info (visible to all roles) */}
-        <div style={styles.card}>
-          <div style={styles.profileHeader}>
-            <div style={styles.avatar}>
-              <User size={40} />
+    <div className="profile-page">
+      <div className="profile-container">
+        
+        {/* ✅ Profile Info Header */}
+        <div className="profile-card">
+          <div className="profile-cover"></div>
+          <div className="profile-card-content">
+            <div className="profile-avatar-wrapper">
+              <div className="profile-avatar-inner">
+                <User size={48} strokeWidth={1.5} />
+              </div>
             </div>
-            <div>
-              <h2 style={styles.name}>{userData.fullName}</h2>
-              <p style={styles.role}>📍 {userData.village}</p>
+            
+            <div className="profile-header-details">
+              <h2 className="profile-name">{userData.fullName}</h2>
+              
+              <div className="profile-contact-info">
+                <div className="contact-item">
+                  <Mail size={16} /> {userData.email}
+                </div>
+                <div className="contact-item">
+                  <Phone size={16} /> {userData.phone}
+                </div>
+              </div>
+              
+              <div className="role-badge">
+                Role: {userData.role}
+              </div>
             </div>
-          </div>
-          <div style={styles.infoRow}>
-            <p>
-              <Mail size={16} /> {userData.email}
-            </p>
-            <p>
-              <Phone size={16} /> {userData.phone}
-            </p>
-          </div>
-          <div style={{ marginTop: "10px", fontSize: "14px", color: "#555" }}>
-            <strong>Role:</strong> {userData.role}
           </div>
         </div>
 
         {/* ✅ Villager-only features */}
         {userData.role === "villager" && (
           <>
-            {/* Update Profile */}
-            <div style={styles.card}>
-              <h3 style={styles.sectionTitle}>
-                <UserCheck size={20} /> Update Your Details
-              </h3>
-              <div style={styles.formGrid}>
-                {[
-                  "occupation",
-                  "gender",
-                  "dob",
-                  "age",
-                  "income",
-                  "caste",
-                  "area",
-                  "aadhaar", // ✅ Add this here
-                ].map((field) => (
-                  <div key={field} style={styles.inputGroup}>
-                    <label style={styles.label}>
-                      {field === "area"
-                        ? "Village Area / Ward"
-                        : field === "aadhaar"
-                        ? "Aadhaar Number" // ✅ Custom label for Aadhaar
-                        : field.charAt(0).toUpperCase() + field.slice(1)}
-                    </label>
-
-                    {field === "gender" ? (
-                      <select
-                        name={field}
-                        value={editData[field]}
-                        onChange={handleChange}
-                        style={styles.input}
-                      >
-                        <option value="">Select Gender</option>
-                        <option>Male</option>
-                        <option>Female</option>
-                        <option>Other</option>
-                      </select>
-                    ) : field === "area" ? ( // ✅ New Dropdown for Area
-                      <select
-                        name={field}
-                        value={editData[field]}
-                        onChange={handleChange}
-                        style={styles.input}
-                      >
-                        <option value="">Select Ward/Area</option>
-                        <option>Ward No. 1</option>
-                        <option>Ward No. 2</option>
-                        <option>Ward No. 3</option>
-                        <option>Market Area</option>
-                        <option>Temple Square</option>
-                      </select>
-                    ) : (
-                      <input
-                        name={field}
-                        type={
-                          field === "dob"
-                            ? "date"
-                            : field === "age" ||
-                              field === "income" ||
-                              field === "aadhaar" // ✅ Use number type/logic
-                            ? "number"
-                            : "text"
-                        }
-                        // ✅ Prevent more than 12 digits
-                        onInput={(e) => {
-                          if (
-                            field === "aadhaar" &&
-                            e.target.value.length > 12
-                          ) {
-                            e.target.value = e.target.value.slice(0, 12);
-                          }
-                        }}
-                        value={editData[field]}
-                        onChange={handleChange}
-                        style={styles.input}
-                        placeholder={
-                          field === "aadhaar" ? "12-digit Aadhaar" : ""
-                        }
-                      />
-                    )}
-                    {errors[field] && (
-                      <span style={styles.error}>{errors[field]}</span>
-                    )}
-                  </div>
-                ))}
-
-                {/* File Uploads */}
-                <div style={styles.inputGroup}>
-                  <label style={styles.label}>Ration Card</label>
-                  <input
-                    type="file"
-                    name="rationCard"
-                    accept="image/jpeg,image/png"
-                    onChange={handleFileChange}
-                    style={styles.input}
-                  />
-                  {docURLs.rationCard && (
-                    <a
-                      href={docURLs.rationCard}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={styles.linkButton}
-                    >
-                      🔍 Preview
-                    </a>
-                  )}
-                </div>
-                <div style={styles.inputGroup}>
-                  <label style={styles.label}>7/12 Extract</label>
-                  <input
-                    type="file"
-                    name="sevenTwelfth"
-                    accept="image/jpeg,image/png"
-                    onChange={handleFileChange}
-                    style={styles.input}
-                  />
-                  {docURLs.sevenTwelfth && (
-                    <a
-                      href={docURLs.sevenTwelfth}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={styles.linkButton}
-                    >
-                      🔍 Preview
-                    </a>
-                  )}
-                </div>
-              </div>
-
-              <div style={styles.buttonRow}>
-                <button
-                  onClick={handleSave}
-                  style={styles.saveButton}
-                  disabled={saving}
-                >
-                  <Save size={16} /> {saving ? "Saving..." : "Save"}
-                </button>
-                <button
-                  onClick={() => navigate("/add-member")}
-                  style={styles.addButton}
-                >
-                  <Plus size={16} /> Add Family Member
-                </button>
-              </div>
-              {successMsg && <p style={styles.successMsg}>{successMsg}</p>}
-            </div>
-
-            {/* Family Members */}
-            {members.length > 0 && (
-              <div style={styles.card}>
-                <h3 style={styles.sectionTitle}>
-                  <Users size={20} /> Family Members
+            {/* Update Profile Details */}
+            <div className="profile-card">
+              <div className="profile-card-content">
+                <h3 className="section-title">
+                  <UserCheck size={22} /> Personal & Demographic Details
                 </h3>
-                <div style={styles.membersGrid}>
-                  {members.map((m) => (
-                    <div key={m.id} style={styles.memberCard}>
-                      <div style={styles.memberTop}>
-                        <div style={styles.memberAvatar}>{m.fullName?.[0]}</div>
-                        <div>
-                          <strong>{m.fullName}</strong>
-                          <div style={styles.memberSub}>{m.relation}</div>
-                        </div>
-                      </div>
-                      <div style={styles.memberDetails}>
-                        <div>Email: {m.email}</div>
-                        <div>Phone: {m.phone}</div>
-                        <div>Gender: {m.gender}</div>
-                        <div>Age: {m.age}</div>
-                      </div>
-                      <button
-                        style={styles.editButton}
-                        onClick={() => handleMemberEdit(m)}
-                      >
-                        ✏️ Edit
-                      </button>
+                
+                <div className="form-grid">
+                  {/* Render fields logically */}
+                  {[
+                    "occupation",
+                    "gender",
+                    "dob", 
+                    "age",
+                    "income",
+                    "caste",
+                    "area",
+                    "aadhaar",
+                  ].map((field) => (
+                    <div key={field} className="input-group">
+                      <label className="input-label">
+                        {field === "area"
+                          ? "Village Area / Ward"
+                          : field === "aadhaar"
+                          ? "Aadhaar Number"
+                          : field === "dob"
+                          ? "Date of Birth"
+                          : field.charAt(0).toUpperCase() + field.slice(1)}
+                      </label>
+
+                      {field === "gender" ? (
+                        <select
+                          name={field}
+                          value={editData[field]}
+                          onChange={handleChange}
+                          className="input-field"
+                        >
+                          <option value="">Select Gender</option>
+                          <option>Male</option>
+                          <option>Female</option>
+                          <option>Other</option>
+                        </select>
+                      ) : field === "area" ? (
+                        <select
+                          name={field}
+                          value={editData[field]}
+                          onChange={handleChange}
+                          className="input-field"
+                        >
+                          <option value="">Select Ward/Area</option>
+                          <option>Ward No. 1</option>
+                          <option>Ward No. 2</option>
+                          <option>Ward No. 3</option>
+                          <option>Market Area</option>
+                          <option>Temple Square</option>
+                        </select>
+                      ) : (
+                        <input
+                          name={field}
+                          type={
+                            field === "dob"
+                              ? "date"
+                              : field === "income" || field === "aadhaar" || field === "age"
+                              ? "number"
+                              : "text"
+                          }
+                          onInput={(e) => {
+                            if (field === "aadhaar" && e.target.value.length > 12) {
+                              e.target.value = e.target.value.slice(0, 12);
+                            }
+                          }}
+                          value={editData[field]}
+                          onChange={handleChange}
+                          className="input-field"
+                          placeholder={field === "aadhaar" ? "12-digit Aadhaar" : `Enter ${field}`}
+                        />
+                      )}
+                      {errors[field] && (
+                        <span className="input-error-text">
+                          * {errors[field]}
+                        </span>
+                      )}
                     </div>
                   ))}
+                </div>
+
+                {/* File Uploads Section */}
+                <h3 className="section-title" style={{ marginTop: '35px' }}>
+                  <FileText size={22} /> Verification Documents
+                </h3>
+                
+                <div className="form-grid">
+                  <div className="input-group">
+                    <label className="input-label">Ration Card</label>
+                    <label className="file-upload-wrapper">
+                      <input
+                        type="file"
+                        name="rationCard"
+                        accept="image/jpeg,image/png"
+                        onChange={handleFileChange}
+                        className="file-upload-input"
+                      />
+                      <div className="file-upload-content">
+                        <UploadCloud size={32} />
+                        <span>
+                          {documents.rationCard 
+                            ? documents.rationCard.name 
+                            : "Click or drag file to upload"}
+                        </span>
+                      </div>
+                    </label>
+                    {docURLs.rationCard && (
+                      <a
+                        href={docURLs.rationCard}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="preview-badge"
+                      >
+                        <FileText size={14} /> View Current Card
+                      </a>
+                    )}
+                  </div>
+
+                  <div className="input-group">
+                    <label className="input-label">7/12 Extract</label>
+                    <label className="file-upload-wrapper">
+                      <input
+                        type="file"
+                        name="sevenTwelfth"
+                        accept="image/jpeg,image/png"
+                        onChange={handleFileChange}
+                        className="file-upload-input"
+                      />
+                      <div className="file-upload-content">
+                        <UploadCloud size={32} />
+                        <span>
+                          {documents.sevenTwelfth 
+                            ? documents.sevenTwelfth.name 
+                            : "Click or drag file to upload"}
+                        </span>
+                      </div>
+                    </label>
+                    {docURLs.sevenTwelfth && (
+                      <a
+                        href={docURLs.sevenTwelfth}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="preview-badge"
+                      >
+                        <FileText size={14} /> View Current Extract
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                <div className="button-row">
+                  <button
+                    onClick={() => navigate("/add-member")}
+                    className="btn btn-outline"
+                  >
+                    <Plus size={18} /> Add Family Member
+                  </button>
+
+                  <button
+                    onClick={handleSave}
+                    className="btn btn-primary"
+                    disabled={saving}
+                  >
+                    <Save size={18} /> {saving ? "Saving..." : "Save Changes"}
+                  </button>
+                </div>
+                {successMsg && (
+                  <div className="success-message">
+                    <UserCheck size={18} /> {successMsg}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Family Members List */}
+            {members.length > 0 && (
+              <div className="profile-card">
+                <div className="profile-card-content">
+                  <h3 className="section-title">
+                    <Users size={22} /> Family Members
+                  </h3>
+                  <div className="members-grid">
+                    {members.map((m) => (
+                      <div key={m.id} className="member-card">
+                        <div className="member-header">
+                          <div className="member-avatar">
+                            {m.fullName?.[0]?.toUpperCase()}
+                          </div>
+                          <div className="member-info">
+                            <h4 className="member-name">{m.fullName}</h4>
+                            <span className="member-relation">{m.relation}</span>
+                          </div>
+                        </div>
+                        <div className="member-details">
+                          <div className="member-details-row">
+                            <Mail size={14} /> {m.email || "N/A"}
+                          </div>
+                          <div className="member-details-row">
+                            <Phone size={14} /> {m.phone || "N/A"}
+                          </div>
+                          <div className="member-details-row">
+                            <User size={14} /> {m.gender || "N/A"} • Age: {m.age || "N/A"}
+                          </div>
+                        </div>
+                        <button
+                          className="btn-edit"
+                          onClick={() => handleMemberEdit(m)}
+                        >
+                          ✏️ Edit Details
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             )}
 
             {/* Modal for Editing Member */}
             {modalOpen && (
-              <div style={styles.modalOverlay}>
-                <div style={styles.modal}>
-                  <h3>Edit Family Member</h3>
-                  {["fullName", "relation", "email", "phone", "age"].map(
-                    (field) => (
-                      <div key={field} style={styles.inputGroup}>
-                        <label style={styles.label}>{field}</label>
-                        <input
-                          type={field === "age" ? "number" : "text"}
-                          name={field}
-                          value={editMemberData[field] || ""}
-                          onChange={handleMemberChange}
-                          style={styles.input}
-                        />
-                        {memberErrors[field] && (
-                          <span style={styles.error}>
-                            {memberErrors[field]}
-                          </span>
-                        )}
-                      </div>
-                    )
-                  )}
-                  <div style={styles.inputGroup}>
-                    <label style={styles.label}>Gender</label>
-                    <select
-                      name="gender"
-                      value={editMemberData.gender || ""}
-                      onChange={handleMemberChange}
-                      style={styles.input}
-                    >
-                      <option value="">Select Gender</option>
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                      <option value="Other">Other</option>
-                    </select>
-                    {memberErrors.gender && (
-                      <span style={styles.error}>{memberErrors.gender}</span>
+              <div className="modal-overlay">
+                <div className="modal-content">
+                  <h3 className="modal-title">Edit Family Member</h3>
+                  <div className="form-grid" style={{ gridTemplateColumns: '1fr', gap: '15px' }}>
+                    {["fullName", "relation", "email", "phone", "age"].map(
+                      (field) => (
+                        <div key={field} className="input-group">
+                          <label className="input-label">
+                            {field.charAt(0).toUpperCase() + field.slice(1).replace(/([A-Z])/g, ' $1').trim()}
+                          </label>
+                          <input
+                            type={field === 'age' || field === 'phone' ? 'number' : 'text'}
+                            name={field}
+                            value={editMemberData[field] || ""}
+                            onChange={handleMemberChange}
+                            className="input-field"
+                          />
+                          {memberErrors[field] && (
+                            <span className="input-error-text">
+                              * {memberErrors[field]}
+                            </span>
+                          )}
+                        </div>
+                      )
                     )}
+                    
+                    <div className="input-group">
+                      <label className="input-label">Gender</label>
+                      <select
+                        name="gender"
+                        value={editMemberData.gender || ""}
+                        onChange={handleMemberChange}
+                        className="input-field"
+                      >
+                        <option value="">Select Gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                      </select>
+                      {memberErrors.gender && (
+                        <span className="input-error-text">* {memberErrors.gender}</span>
+                      )}
+                    </div>
                   </div>
 
-                  <div style={styles.buttonRow}>
-                    <button
-                      onClick={handleMemberSave}
-                      style={styles.saveButton}
-                    >
-                      Save Changes
-                    </button>
+                  <div className="modal-footer">
                     <button
                       onClick={() => {
                         setModalOpen(false);
                         setMemberErrors({});
                         setSelectedMember(null);
                       }}
-                      style={styles.addButton}
+                      className="btn btn-outline"
                     >
                       Cancel
+                    </button>
+                    <button
+                      onClick={handleMemberSave}
+                      className="btn btn-primary"
+                    >
+                      Save Changes
                     </button>
                   </div>
                 </div>
@@ -491,211 +569,5 @@ const Profile = () => {
     </div>
   );
 };
-
-// ✅ Styles (unchanged from your version)
-const styles = {
-  linkButton: {
-    display: "inline-block",
-    marginTop: "8px",
-    padding: "6px 12px",
-    backgroundColor: "#eaeaea",
-    borderRadius: "6px",
-    fontSize: "14px",
-    color: "#333",
-    textDecoration: "none",
-  },
-  page: {
-    backgroundColor: "#f2f4f8",
-    minHeight: "100vh",
-    paddingTop: "100px",
-    paddingBottom: "40px",
-    paddingInline: "20px",
-    fontFamily: "Segoe UI, sans-serif",
-  },
-  container: { maxWidth: "1000px", margin: "0 auto" },
-  card: {
-    backgroundColor: "#fff",
-    borderRadius: "12px",
-    padding: "24px",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
-    marginBottom: "30px",
-  },
-  profileHeader: {
-    display: "flex",
-    alignItems: "center",
-    gap: "20px",
-    marginBottom: "16px",
-  },
-  avatar: {
-    backgroundColor: "#e0f0ff",
-    width: "60px",
-    height: "60px",
-    borderRadius: "50%",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  name: { fontSize: "20px", fontWeight: "600", margin: 0 },
-  role: { color: "#666", marginTop: "4px" },
-  infoRow: {
-    display: "flex",
-    gap: "40px",
-    color: "#333",
-    fontSize: "14px",
-    marginTop: "10px",
-  },
-  sectionTitle: {
-    fontSize: "18px",
-    fontWeight: "600",
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    marginBottom: "20px",
-  },
-  formGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))",
-    gap: "20px",
-  },
-  inputGroup: { display: "flex", flexDirection: "column" },
-  label: { fontSize: "14px", marginBottom: "4px" },
-  input: {
-    padding: "10px",
-    borderRadius: "6px",
-    border: "1px solid #ccc",
-    fontSize: "14px",
-  },
-  error: { fontSize: "12px", color: "red", marginTop: "4px" },
-  buttonRow: {
-    display: "flex",
-    justifyContent: "space-between",
-    marginTop: "20px",
-    gap: "10px",
-  },
-  saveButton: {
-    backgroundColor: "#28a745",
-    color: "#fff",
-    border: "none",
-    padding: "10px 16px",
-    borderRadius: "6px",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-  },
-  addButton: {
-    backgroundColor: "#007bff",
-    color: "#fff",
-    border: "none",
-    padding: "10px 16px",
-    borderRadius: "6px",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-  },
-  successMsg: {
-    marginTop: "16px",
-    color: "#155724",
-    backgroundColor: "#d4edda",
-    padding: "10px",
-  },
-  membersGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", // ✅ responsive grid
-    gap: "15px",
-  },
-  memberCard: {
-    border: "1px solid #ddd",
-    borderRadius: "8px",
-    padding: "10px",
-    backgroundColor: "#fafafa",
-  },
-  memberTop: {
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    marginBottom: "10px",
-  },
-  memberAvatar: {
-    backgroundColor: "#d1d5db",
-    borderRadius: "50%",
-    width: "32px",
-    height: "32px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontWeight: "bold",
-  },
-  memberSub: {
-    fontSize: "12px",
-    color: "#555",
-  },
-  memberDetails: {
-    fontSize: "13px",
-    marginBottom: "10px",
-  },
-  editButton: {
-    backgroundColor: "#f59e0b",
-    color: "white",
-    border: "none",
-    borderRadius: "6px",
-    padding: "6px 10px",
-    cursor: "pointer",
-  },
-  modalOverlay: {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: "100%",
-    backgroundColor: "rgba(0,0,0,0.5)",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modal: {
-    backgroundColor: "white",
-    padding: "20px",
-    borderRadius: "8px",
-    width: "90%", // ✅ will shrink on mobile
-    maxWidth: "400px", // ✅ keeps it neat on laptop
-  },
-
-  linkButton: {
-    display: "inline-block",
-    marginTop: "6px",
-    fontSize: "13px",
-    color: "#2563eb",
-    textDecoration: "underline",
-  },
-  loadingContainer: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    height: "100vh",
-  },
-  spinner: {
-    border: "4px solid #f3f3f3",
-    borderTop: "4px solid #3498db",
-    borderRadius: "50%",
-    width: "40px",
-    height: "40px",
-    animation: "spin 1s linear infinite",
-  },
-};
-
-// ✅ Required spinner keyframes (must be in global CSS)
-const spinnerStyles = `
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-`;
-const styleSheet = document.createElement("style");
-styleSheet.type = "text/css";
-styleSheet.innerText = spinnerStyles;
-document.head.appendChild(styleSheet);
 
 export default Profile;

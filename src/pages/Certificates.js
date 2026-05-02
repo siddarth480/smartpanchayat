@@ -9,9 +9,8 @@ import {
   onSnapshot,
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
-import { jsPDF } from "jspdf";
-import govLogo from "../assets/gov-logo.png"; // <-- Add your logo in /assets
-import greenTick from "../assets/green-tick.png";
+import { jsPDF } from "jspdf";  
+
 import {
   AiOutlineFileAdd,
   AiOutlineInfoCircle,
@@ -19,15 +18,6 @@ import {
   AiOutlineQuestionCircle,
 } from "react-icons/ai";
 import { MdOutlinePictureAsPdf } from "react-icons/md";
-
-// ✅ Import images
-import HomeCerImage from "../assets/home_cer.png";
-import ClockImage from "../assets/clock.png";
-import TrackingImage from "../assets/tracking.png";
-import FillFormImage from "../assets/fill-form.png";
-import ReviewImage from "../assets/review.png";
-import ApprovedImage from "../assets/approved.png";
-import DownloadImage from "../assets/download.png";
 
 const Certificates = () => {
   const [formData, setFormData] = useState({
@@ -131,7 +121,7 @@ const Certificates = () => {
 
     // === Government Logo (fixed ratio, larger) ===
     // Adjusted size: 30x30 instead of 20x20
-    doc.addImage(govLogo, "PNG", 90, 12, 30, 30); // center top, not squished
+    doc.addImage("/gov-logo.png", "PNG", 90, 12, 30, 30); // center top, not squished
 
     // === Header ===
     doc.setFont("times", "bold");
@@ -240,7 +230,7 @@ const Certificates = () => {
     const tickSize = 20; // image size
     const tickX = sigX + sigWidth / 2 - tickSize / 2;
     const tickY = sigY + sigHeight / 2 - tickSize / 2;
-    doc.addImage(greenTick, "PNG", tickX, tickY, tickSize, tickSize);
+    doc.addImage("/green-tick.png", "PNG", tickX, tickY, tickSize, tickSize);
 
     // Reset text
     doc.setTextColor(0, 0, 0);
@@ -298,12 +288,12 @@ const Certificates = () => {
         >
           {[
             {
-              img: HomeCerImage,
+              img: "/home_cer.png",
               text: "Apply from your home without visiting offices",
             },
-            { img: ClockImage, text: "Save time with faster processing" },
+            { img: "/clock.png", text: "Save time with faster processing" },
             {
-              img: TrackingImage,
+              img: "/tracking.png",
               text: "Easy and transparent status tracking",
             },
           ].map((item, idx) => (
@@ -335,19 +325,19 @@ const Certificates = () => {
         >
           {[
             {
-              img: FillFormImage,
+              img: "/fill-form.png",
               text: "Fill the application form and submit online",
             },
             {
-              img: ReviewImage,
+              img: "/review.png",
               text: "Panchayat operator reviews your application",
             },
             {
-              img: ApprovedImage,
+              img: "/approved.png",
               text: "On approval, certificate is digitally signed",
             },
             {
-              img: DownloadImage,
+              img: "/download.png",
               text: "Villager downloads the PDF instantly",
             },
           ].map((step, idx) => (

@@ -1,9 +1,6 @@
-// src/pages/Dashboard.js
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import { auth, db } from "../firebase/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import BirdGif from "../assets/birds.gif";
-
 import {
   collection,
   doc,
@@ -13,27 +10,63 @@ import {
   serverTimestamp,
   query,
   orderBy,
+  limit,
+  onSnapshot
 } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import {
+  FileText,
+  CreditCard,
+  MessageSquareWarning,
+  PenSquare,
+  X,
+  Image as ImageIcon,
+  CheckCircle,
+  FileSpreadsheet,
+  AlertTriangle,
+  Users,
+  Shield,
+  Map,
+  Activity,
+  UserPlus,
+  Building,
+  UploadCloud,
+  TrendingUp,
+  BarChart2,
+  PieChart,
+  Bell
+} from "lucide-react";
+import "./Dashboard.css";
 
-import VillageImage from "../assets/home.png";
-import VillageInfo1 from "../assets/img1.png";
-import VillageInfo2 from "../assets/img2.png";
-import VillageInfo3 from "../assets/img3.png";
+const CLOUDINARY_UPLOAD_PRESET = "sid111";
+const CLOUDINARY_CLOUD_NAME = "dteguxelm";
 
 const Dashboard = () => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [posts, setPosts] = useState([]);
-  const [comments, setComments] = useState({});
-  const [newComment, setNewComment] = useState({});
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchFocused, setSearchFocused] = useState(false);
   const navigate = useNavigate();
-  const commentRefs = useRef({});
 
-  // ---------------- Smart Tips Carousel (Different Design) ----------------
+  // Stats for Oversight
+  const [stats, setStats] = useState({
+    posts: 0,
+    schemes: 0,
+    complaints: 0,
+  });
+
+  // Modal State
+  const [showPostModal, setShowPostModal] = useState(false);
+  const [caption, setCaption] = useState("");
+  const [mediaFiles, setMediaFiles] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+
+  // Announcements State
+  const [announcements, setAnnouncements] = useState([]);
+  const [showAnnouncementModal, setShowAnnouncementModal] = useState(false);
+  const [announcementType, setAnnouncementType] = useState("Info");
+  const [announcementMessage, setAnnouncementMessage] = useState("");
+  const [announcementSubmitting, setAnnouncementSubmitting] = useState(false);
+
   const tips = [
     "Save water by fixing leaks promptly.",
     "Dispose of garbage according to schedule.",
@@ -42,21 +75,70 @@ const Dashboard = () => {
     "Report damaged roads or infrastructure immediately.",
   ];
 
-  // Auth check
+  const initiatives = [
+    {
+      icon: Shield,
+      title: "Secure Governance",
+      description: "Access transparent records, track local projects, and monitor village budgets directly from your dashboard.",
+      details: ["Real-time budget tracking", "Project milestones", "Expenditure reports"],
+    },
+    {
+      icon: Map,
+      title: "Village Planning",
+      description: "Participate in mapping out new infrastructure and improving the layout of your community.",
+      details: ["Infrastructure polls", "Road planning", "Resource mapping"],
+    },
+    {
+      icon: Activity,
+      title: "Health & Sanitation",
+      description: "Stay updated on health camps, sanitation drives, and waste management schedules.",
+      details: ["Waste collection routes", "Health camp dates", "Cleanliness drives"],
+    },
+  ];
+
+  const steps = [
+    {
+      icon: UserPlus,
+      title: "Complete Your Profile",
+      step: "01",
+      description: "Ensure your details are up-to-date to access personalized schemes and services.",
+    },
+    {
+      icon: FileText,
+      title: "Apply for Services",
+      step: "02",
+      description: "Use the Quick Actions panel to apply for schemes or raise complaints instantly.",
+    },
+    {
+      icon: Building,
+      title: "Engage with Panchayat",
+      step: "03",
+      description: "Stay active, vote in polls, and help build a stronger, digitally empowered community.",
+    },
+  ];
+
+  // Auth & Data Fetching
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (!currentUser) navigate("/login");
-      else {
+      if (!currentUser) {
+        navigate("/login");
+      } else {
         try {
           const userDocRef = doc(db, "users", currentUser.uid);
           const userDoc = await getDoc(userDocRef);
-          if (userDoc.exists()) setUser({ ...currentUser, ...userDoc.data() });
-          else
+          if (userDoc.exists()) {
+            setUser({ ...currentUser, ...userDoc.data() });
+          } else {
             setUser({
               ...currentUser,
               fullName: "Unknown User",
               role: "villager",
             });
+          }
+
+          // Fetch Stats
+          fetchStats();
+
         } catch (err) {
           console.error(err);
         } finally {
@@ -67,563 +149,544 @@ const Dashboard = () => {
     return () => unsubscribe();
   }, [navigate]);
 
-  // Fetch posts
+  // Fetch Live Announcements
   useEffect(() => {
-    const fetchPosts = async () => {
-      const snap = await getDocs(
-        query(collection(db, "memberPosts"), orderBy("createdAt", "desc"))
-      );
-      const data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      setPosts(data);
-    };
-    fetchPosts();
+    const q = query(
+      collection(db, "announcements"),
+      orderBy("createdAt", "desc"),
+      limit(5)
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetched = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setAnnouncements(fetched);
+    });
+    return () => unsubscribe();
   }, []);
 
-  // Fetch comments
-  useEffect(() => {
-    const fetchComments = async () => {
-      const all = {};
-      for (const post of posts) {
-        const snap = await getDocs(
-          query(
-            collection(db, "memberPosts", post.id, "comments"),
-            orderBy("createdAt", "asc")
-          )
-        );
-        all[post.id] = snap.docs.map((d) => d.data());
-      }
-      setComments(all);
-    };
-    if (posts.length > 0) fetchComments();
-  }, [posts]);
+  const fetchStats = async () => {
+    try {
+      const postsSnap = await getDocs(collection(db, "memberPosts"));
+      const schemesSnap = await getDocs(collection(db, "schemes"));
+      const complaintsSnap = await getDocs(collection(db, "complaints"));
 
-  // Add comment
-  const handleCommentSubmit = async (postId) => {
-    const text = newComment[postId]?.trim();
-    if (!text) return;
-
-    const comment = {
-      text,
-      email: user?.email || "anonymous",
-      createdAt: serverTimestamp(),
-    };
-    await addDoc(collection(db, "memberPosts", postId, "comments"), comment);
-
-    setNewComment((prev) => ({ ...prev, [postId]: "" }));
-    setComments((prev) => {
-      const updated = {
-        ...prev,
-        [postId]: [
-          ...(prev[postId] || []),
-          { ...comment, createdAt: new Date() },
-        ],
-      };
-      setTimeout(() => {
-        commentRefs.current[postId]?.scrollIntoView({ behavior: "smooth" });
-      }, 100);
-      return updated;
-    });
+      setStats({
+        posts: postsSnap.size,
+        schemes: schemesSnap.size,
+        complaints: complaintsSnap.size,
+      });
+    } catch (error) {
+      console.log("Error fetching stats:", error);
+    }
   };
 
-  // Scroll-in animation hook
+  // Scroll Animation Logic
   useEffect(() => {
-    const elements = document.querySelectorAll(".scroll-animate");
+    if (loading) return;
+
     const observer = new IntersectionObserver(
       (entries) => {
-        entries.forEach(
-          (entry) =>
-            entry.isIntersecting && entry.target.classList.add("visible")
-        );
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("active");
+          }
+        });
       },
       { threshold: 0.1 }
     );
+
+    const elements = document.querySelectorAll(".reveal");
     elements.forEach((el) => observer.observe(el));
-    return () => elements.forEach((el) => observer.unobserve(el));
-  }, [posts]);
 
-  const filteredPosts = posts.filter(
-    (post) =>
-      post.caption?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      post.title?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+    return () => observer.disconnect();
+  }, [loading]);
 
-  if (loading)
-    return (
-      <p style={{ textAlign: "center", marginTop: "100px" }}>Loading...</p>
+  // --- Quick Post Logic ---
+  const handleMediaSelect = (e) => {
+    setMediaFiles((prev) => [...prev, ...Array.from(e.target.files)]);
+  };
+
+  const removeMedia = (index) => {
+    const updated = [...mediaFiles];
+    updated.splice(index, 1);
+    setMediaFiles(updated);
+  };
+
+  const uploadToCloudinary = async (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+    formData.append("cloud_name", CLOUDINARY_CLOUD_NAME);
+
+    const type = file.type.startsWith("video") ? "video" : "image";
+    const res = await fetch(
+      `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/${type}/upload`,
+      { method: "POST", body: formData }
     );
+    const data = await res.json();
+    if (!data.secure_url) throw new Error("Upload failed");
+    return { url: data.secure_url, type };
+  };
+
+  const handlePostSubmit = async (e) => {
+    e.preventDefault();
+    if (!caption.trim() && mediaFiles.length === 0)
+      return alert("Add a caption or media.");
+
+    setSubmitting(true);
+    try {
+      const uploaded = [];
+      for (const file of mediaFiles) {
+        uploaded.push(await uploadToCloudinary(file));
+      }
+
+      await addDoc(collection(db, "memberPosts"), {
+        caption,
+        media: uploaded,
+        createdAt: serverTimestamp(),
+        email: user.email,
+        userId: user.uid,
+      });
+
+      setCaption("");
+      setMediaFiles([]);
+      setSuccessMessage("Post submitted successfully!");
+      fetchStats(); // Update stats
+      setTimeout(() => {
+        setSuccessMessage("");
+        setShowPostModal(false);
+      }, 2000);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to submit post.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleAnnouncementSubmit = async (e) => {
+    e.preventDefault();
+    if (!announcementMessage.trim()) return;
+    setAnnouncementSubmitting(true);
+    try {
+      await addDoc(collection(db, "announcements"), {
+        type: announcementType,
+        message: announcementMessage,
+        createdAt: serverTimestamp(),
+        author: user.fullName || user.email,
+        userId: user.uid,
+      });
+      setAnnouncementMessage("");
+      setSuccessMessage("Announcement posted successfully!");
+      setTimeout(() => {
+        setSuccessMessage("");
+        setShowAnnouncementModal(false);
+      }, 2000);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to submit announcement.");
+    } finally {
+      setAnnouncementSubmitting(false);
+    }
+  };
+
+  if (loading) {
+    return <p style={{ textAlign: "center", marginTop: "100px" }}>Loading Dashboard...</p>;
+  }
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good Morning";
+    if (hour < 18) return "Good Afternoon";
+    return "Good Evening";
+  };
+
+  // Mock calculations for visual data oversight based on real fetched counts
+  const mockResolutionRate = stats.complaints > 0 ? Math.min(Math.round((stats.complaints * 0.7)), stats.complaints) : 0;
+  const mockSchemesReached = stats.schemes * 15;
 
   return (
-    <div style={styles.wrapper}>
-      {/* KEYFRAMES: birds start at header top-left and stay fully opaque */}
-      <style>{`
-        @keyframes flyLoop {
-          0%   { transform: translateX(0vw)   translateY(0vh)  rotate(0deg);   opacity: 1; }
-          25%  { transform: translateX(25vw)  translateY(10vh) rotate(10deg);  opacity: 1; }
-          50%  { transform: translateX(55vw)  translateY(22vh) rotate(-8deg);  opacity: 1; }
-          75% { transform: translateX(90vw) translateY(10vh) rotate(5deg); opacity: 1; }
-          100% { transform: translateX(110vw) translateY(-10vh) rotate(0deg); opacity: 1; }
-        }
-
-        /* Other animations & responsive rules */
-        @keyframes fadeSlideUp {0% {opacity:0; transform:translateY(20px);}100% {opacity:1; transform:translateY(0);}}
-        @keyframes fadeIn {0% {opacity:0;}100% {opacity:1;}}
-        @keyframes gradientText {0%{background-position:0% 50%;}50%{background-position:100% 50%;}100%{background-position:0% 50%;}}
-
-        .animate-title {
-          opacity:0;
-          animation: fadeSlideUp 1s ease forwards, gradientText 3s ease infinite;
-          background: linear-gradient(90deg,#ff7e5f,#feb47b,#ff7e5f);
-          background-size: 200% auto;
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-        }
-        .post-card-animate { opacity:0; transform: translateY(20px); transition: all 0.6s ease; }
-        .post-card-animate.visible { opacity:1; transform: translateY(0); }
-        .post-card-animate:hover { transform: translateY(-5px) scale(1.01); box-shadow: 0 16px 32px rgba(0,0,0,0.2); }
-        .scroll-animate { opacity:0; transform: translateY(30px); transition: all 0.8s ease-out; }
-        .scroll-animate.visible { opacity:1; transform: translateY(0); }
-        .comment-bubble { animation: fadeIn 0.4s ease forwards; padding:10px 14px; border-radius:16px; margin-bottom:8px; max-width:75%; word-wrap: break-word; }
-        .comment-bubble.user { background-color:#1e3a8a; color:#fff; align-self:flex-end; }
-        .comment-bubble.other { background-color:#e5e7eb; color:#111827; align-self:flex-start; }
-        .comment-list { display:flex; flex-direction:column; gap:6px; overflow-y:auto; max-height:300px; padding-right:6px; }
-        input:focus { border-color: #1e3a8a; box-shadow: 0 0 5px rgba(30,58,138,0.3); }
-
-        @media (max-width: 1024px) { .headerContent { gap: 20px; } .headerImage { max-width: 400px; } }
-        @media (max-width: 768px) {
-        .headerContent {
-          display: flex;
-          flex-direction: column; /* stack text and image */
-          align-items: center;    /* center horizontally */
-          text-align: center;     /* center text */
-          gap: 20px;              /* spacing between title and image */
-        }
-        .headerTitle {
-          font-size: 36px;        /* smaller font for mobile */
-        }
-        .headerSubtitle {
-          font-size: 16px;        /* smaller subtitle */
-        }
-        .headerImage {
-          max-width: 80%;         /* scale image to fit mobile screen */
-          height: auto;           /* maintain aspect ratio */
-        }
-      }
-
-      @media (max-width: 480px) {
-        .headerTitle {
-          font-size: 28px;        /* very small screens */
-        }
-        .headerSubtitle {
-          font-size: 14px;
-        }
-        .headerImage {
-          max-width: 100%;
-        }
-      }
-
-      `}</style>
-      {/* Header */}
-      <section style={styles.header}>
-        <div className="headerContent" style={styles.headerContent}>
-          <div>
-            <h1
-              className="animate-title headerTitle"
-              style={styles.headerTitle}
-            >
-              🌿 SmartPanchayat
+    <div className="dashboard-wrapper">
+      {/* Hero Section */}
+      <section className="dashboard-hero">
+        <div className="dashboard-bubble float" style={{ top: "10%", left: "5%", width: "120px", height: "120px" }}></div>
+        <div className="dashboard-bubble float" style={{ bottom: "20%", right: "8%", width: "180px", height: "180px", animationDelay: "2s" }}></div>
+        
+        <div className="hero-container">
+          <div className="hero-header-content">
+            <div className="role-badge animate-slide-up delay-100">
+               <Shield size={16} /> 
+               {user?.role === "member" ? " Panchayat Member" : user?.role === "operator" ? "Village Operator" : "Village Resident"}
+            </div>
+            <h1 className="hero-greeting animate-slide-up delay-200">
+              {getGreeting()}, <span className="gradient-text">{user?.fullName?.split(" ")[0] || "User"}</span>
             </h1>
-            <p className="headerSubtitle" style={styles.headerSubtitle}>
-              Empowering villages with transparency & technology
+            <p className="hero-subtitle animate-slide-up delay-300">
+              Welcome to your SmartPanchayat Dashboard. Monitor activities, access digital services, and stay connected.
+            </p>
+            {user?.role === "member" && (
+              <div className="hero-action-buttons animate-slide-up delay-400">
+                <button 
+                  className="hero-announcement-btn"
+                  onClick={() => setShowAnnouncementModal(true)}
+                >
+                  <Bell size={18} /> Add Announcement
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="bottom-wave">
+          <svg
+            viewBox="0 0 1440 120"
+            className="wave-svg"
+            preserveAspectRatio="none"
+          >
+            <defs>
+              <linearGradient id="wave-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop offset="0%" stopColor="#f1f5f9" />
+                <stop offset="100%" stopColor="#e2e8f0" />
+              </linearGradient>
+            </defs>
+            <path
+              fill="url(#wave-gradient)"
+              d="M0,64L48,69.3C96,75,192,85,288,80C384,75,480,53,576,53.3C672,53,768,75,864,85.3C960,96,1056,96,1152,85.3C1248,75,1344,53,1392,42.7L1440,32L1440,120L1392,120C1344,120,1248,120,1152,120C1056,120,960,120,864,120C768,120,672,120,576,120C480,120,384,120,288,120C192,120,96,120,48,120L0,120Z"
+            />
+          </svg>
+        </div>
+      </section>
+
+      {/* Broadcast Marquee */}
+      <div className="broadcast-marquee-wrapper">
+        <div className="broadcast-marquee-container">
+          <div className="broadcast-label">
+            <Bell size={18} color="#d97706" />
+            <span>Announcements</span>
+          </div>
+          <div className="broadcast-track-container">
+            <div className="broadcast-track">
+              {announcements.length > 0 ? (
+                <>
+                  {announcements.map((ann, idx) => (
+                    <React.Fragment key={idx}>
+                      <span>
+                        <strong style={{ color: ann.type === 'Alert' ? '#ef4444' : ann.type === 'Info' ? '#10b981' : '#3b82f6' }}>
+                          {ann.type}:
+                        </strong> {ann.message}
+                      </span>
+                      <span className="broadcast-separator">•</span>
+                    </React.Fragment>
+                  ))}
+                  {/* Duplicate for infinite loop */}
+                  {announcements.map((ann, idx) => (
+                    <React.Fragment key={`dup-${idx}`}>
+                      <span>
+                        <strong style={{ color: ann.type === 'Alert' ? '#ef4444' : ann.type === 'Info' ? '#10b981' : '#3b82f6' }}>
+                          {ann.type}:
+                        </strong> {ann.message}
+                      </span>
+                      <span className="broadcast-separator">•</span>
+                    </React.Fragment>
+                  ))}
+                </>
+              ) : (
+                <span>No new announcements at this time.</span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Dashboard Content */}
+      <main className="dashboard-main">
+        
+        {/* Village Data Oversight Section */}
+        <section>
+          <div className="section-heading-wrapper reveal reveal-up">
+            <h2 className="section-heading">Village Data <span className="gradient-text">Oversight</span></h2>
+            <p className="section-description">A detailed look at the current status of government initiatives, community engagement, and issue resolution in your area.</p>
+          </div>
+          
+          <div className="oversight-grid">
+            {/* Oversight Card 1: Posts/Engagement */}
+            <div className="oversight-card card-blue reveal reveal-up delay-1">
+              <div className="oversight-card-header">
+                <div className="oversight-icon-box">
+                  <Users size={28} />
+                </div>
+                <PieChart size={24} color="#94a3b8" />
+              </div>
+              <h3 className="oversight-card-title">Community Updates</h3>
+              <div className="oversight-main-stat">{stats.posts}</div>
+              <div className="oversight-sub-stat">
+                <TrendingUp size={16} color="#10b981" /> Official uploads tracking
+              </div>
+              <div className="oversight-progress-bg">
+                <div className="oversight-progress-bar" style={{ width: '85%' }}></div>
+              </div>
+              <div className="oversight-footer">
+                <span>Engagement Health</span>
+                <span style={{ color: '#3b82f6' }}>Active</span>
+              </div>
+            </div>
+
+            {/* Oversight Card 2: Schemes */}
+            <div className="oversight-card card-green reveal reveal-up delay-2">
+              <div className="oversight-card-header">
+                <div className="oversight-icon-box">
+                  <FileSpreadsheet size={28} />
+                </div>
+                <BarChart2 size={24} color="#94a3b8" />
+              </div>
+              <h3 className="oversight-card-title">Active Govt Schemes</h3>
+              <div className="oversight-main-stat">{stats.schemes}</div>
+              <div className="oversight-sub-stat">
+                <Users size={16} color="#10b981" /> Est. {mockSchemesReached}+ Beneficiaries
+              </div>
+              <div className="oversight-progress-bg">
+                <div className="oversight-progress-bar" style={{ width: '70%' }}></div>
+              </div>
+              <div className="oversight-footer">
+                <span>Implementation Rate</span>
+                <span style={{ color: '#10b981' }}>Good</span>
+              </div>
+            </div>
+
+            {/* Oversight Card 3: Complaints */}
+            <div className="oversight-card card-orange reveal reveal-up delay-3">
+              <div className="oversight-card-header">
+                <div className="oversight-icon-box">
+                  <AlertTriangle size={28} />
+                </div>
+                <Activity size={24} color="#94a3b8" />
+              </div>
+              <h3 className="oversight-card-title">Reported Issues</h3>
+              <div className="oversight-main-stat">{stats.complaints}</div>
+              <div className="oversight-sub-stat">
+                <CheckCircle size={16} color="#f59e0b" /> {mockResolutionRate} Cases Resolved
+              </div>
+              <div className="oversight-progress-bg">
+                <div className="oversight-progress-bar" style={{ width: stats.complaints > 0 ? `${(mockResolutionRate / stats.complaints) * 100}%` : '0%' }}></div>
+              </div>
+              <div className="oversight-footer">
+                <span>Resolution Progress</span>
+                <span style={{ color: '#f59e0b' }}>In Progress</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Village Initiatives Section (Features) */}
+        <section>
+          <div className="section-heading-wrapper reveal reveal-up">
+            <h2 className="section-heading">
+              Village <span className="gradient-text">Initiatives</span>
+            </h2>
+            <p className="section-description">
+              Programs and tools designed to uplift your community and streamline digital governance.
             </p>
           </div>
-          <div>
-            <img
-              className="headerImage"
-              src={VillageImage}
-              alt="Village Illustration"
-              style={styles.headerImage}
-            />
-          </div>
-        </div>
-
-        {/* Birds animation */}
-        <div style={styles.birdsContainer}>
-          <img
-            src={BirdGif}
-            alt="bird"
-            style={{ ...styles.bird, ...styles.bird1 }}
-          />
-          <img
-            src={BirdGif}
-            alt="bird"
-            style={{ ...styles.bird, ...styles.bird2 }}
-          />
-          <img
-            src={BirdGif}
-            alt="bird"
-            style={{ ...styles.bird, ...styles.bird3 }}
-          />
-        </div>
-      </section>
-      {/* Info Section */}
-      <section style={styles.infoSection}>
-        <h2 style={styles.infoSectionTitle}>Why Choose SmartPanchayat?</h2>
-        {[
-          {
-            img: VillageInfo1,
-            title: "Transparent Governance",
-            text: "SmartPanchayat enables villages to maintain transparent records, track projects, and ensure accountability at every level.",
-            list: [
-              "Project tracking dashboard",
-              "Financial transparency reports",
-              "Real-time notifications of decisions",
-            ],
-            reverse: false,
-          },
-          {
-            img: VillageInfo2,
-            title: "Community Engagement",
-            text: "Engage villagers through notifications, posts, and discussion boards. Encourage collaboration and participation.",
-            list: [
-              "Discussion boards & polls",
-              "Event notifications",
-              "Community surveys",
-            ],
-            reverse: true,
-          },
-          {
-            img: VillageInfo3,
-            title: "Digital Services",
-            text: "Access essential services online, from bill payments to approvals, making administration faster and convenient.",
-            list: [
-              "Bill payments & approvals",
-              "Service request tracking",
-              "Online grievance submissions",
-            ],
-            reverse: false,
-          },
-        ].map((info, i) => (
-          <div
-            key={i}
-            style={{
-              ...styles.infoRow,
-              flexDirection: info.reverse ? "row-reverse" : "row",
-            }}
-            className="scroll-animate"
-          >
-            <div style={styles.infoImageWrapper}>
-              <img src={info.img} alt={info.title} style={styles.infoImage} />
-            </div>
-            <div style={styles.infoText}>
-              <h2 style={styles.infoTextTitle}>{info.title}</h2>
-              <p style={styles.infoTextBody}>{info.text}</p>
-              <ul style={styles.infoList}>
-                {info.list.map((item, j) => (
-                  <li key={j} style={styles.infoListItem}>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        ))}
-      </section>
-      // Inside your component return, below Services section:
-      <div
-        style={{  
-          padding: "60px 20px",
-          overflow: "hidden",
-        }}
-      >
-        <h2
-          style={{
-            textAlign: "center",
-            fontSize: "34px",
-            fontWeight: "700",
-            color: "#d97706", // amber-dark
-            marginBottom: "40px",
-          }}
-        >
-          Smart Village Tips
-        </h2>
-
-        <motion.div
-          style={{
-            display: "flex",
-            gap: "20px",
-          }}
-          animate={{ x: ["0%", "-50%"] }}
-          transition={{
-            x: {
-              repeat: Infinity,
-              repeatType: "loop",
-              duration: 25,
-              ease: "linear",
-            },
-          }}
-        >
-          {tips.concat(tips).map((tip, index) => (
-            <motion.div
-              key={index}
-              whileHover={{ scale: 1.05, rotate: [0, -2, 2, 0] }}
-              style={{
-                flex: "0 0 280px",
-                background: "linear-gradient(135deg, #ffedd5, #fed7aa)",
-                borderRadius: "25px",
-                padding: "25px",
-                textAlign: "center",
-                boxShadow: "0 15px 35px rgba(0,0,0,0.15)",
-                fontSize: "16px",
-                fontWeight: "600",
-                color: "#7c2d12",
-                position: "relative",
-              }}
-            >
-              <span
-                style={{
-                  fontSize: "28px",
-                  display: "block",
-                  marginBottom: "10px",
-                }}
+          <div className="features-grid">
+            {initiatives.map((init, i) => (
+              <div
+                key={i}
+                className={`feature-card reveal reveal-left delay-${i + 1}`}
               >
-                💡
-              </span>
-              {tip}
-            </motion.div>
-          ))}
-        </motion.div>
-      </div>
-      {/* Footer */}
-      <footer style={styles.footer}>
-        <div style={styles.footerContent}>
-          <h3 style={styles.footerTitle}>🌿 SmartPanchayat</h3>
-          <p style={styles.footerText}>
-            Building smarter, more transparent villages with technology.
-          </p>
-          <p style={styles.footerCopy}>
-            © {new Date().getFullYear()} SmartPanchayat. All rights reserved.
-          </p>
+                <div className="feature-icon">
+                  <init.icon size={32} color="#22c55e" />
+                </div>
+                <h3>{init.title}</h3>
+                <p>{init.description}</p>
+                <ul>
+                  {init.details.map((d, idx) => (
+                    <li key={idx}>
+                      <div className="feature-bullet"></div>
+                      {d}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Participation Guide Section (Steps) */}
+        <section>
+          <div className="section-heading-wrapper reveal reveal-up">
+            <h2 className="section-heading">
+              Your <span className="gradient-text">Participation Guide</span>
+            </h2>
+            <p className="section-description">How to make the most of your digital panchayat and contribute effectively.</p>
+          </div>
+          <div className="steps-grid">
+            {steps.map((s, i) => (
+              <div
+                key={i}
+                className={`step-wrapper reveal reveal-pop delay-${i + 1}`}
+              >
+                <div className="step-number">{s.step}</div>
+                <div className="step-card">
+                  <div style={{ marginBottom: "15px" }}>
+                    <s.icon size={44} color="#3b82f6" />
+                  </div>
+                  <h3>{s.title}</h3>
+                  <p>{s.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Smart Village Tips Grid */}
+        <section className="tips-section reveal reveal-up">
+          <div className="section-heading-wrapper" style={{ marginBottom: "40px" }}>
+             <h2 className="section-heading" style={{ fontSize: '2rem' }}>Smart Village <span className="gradient-text">Tips</span></h2>
+             <p className="section-description">Everyday practices to build a better, cleaner community.</p>
+          </div>
+          <div className="tips-grid">
+            {tips.map((tip, index) => (
+              <div key={index} className={`tip-card-modern reveal reveal-up delay-${(index % 3) + 1}`}>
+                <div className="tip-icon-modern">💡</div>
+                <p className="tip-text-modern">{tip}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+      </main>
+
+      {/* Quick Post / Data Upload Modal */}
+      {showPostModal && (
+        <div className="modal-overlay" onClick={() => setShowPostModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setShowPostModal(false)}>
+              <X size={24} />
+            </button>
+            <h2 className="modal-title">Upload Official Data</h2>
+            <p className="modal-subtitle">Share announcements, images, or records to the central dashboard tracking.</p>
+            
+            {successMessage ? (
+              <div style={{ textAlign: 'center', padding: '40px 0', color: '#16a34a' }}>
+                <CheckCircle size={72} style={{ margin: '0 auto 20px' }} />
+                <h3 style={{ fontSize: '1.5rem', fontWeight: '700' }}>{successMessage}</h3>
+              </div>
+            ) : (
+              <form onSubmit={handlePostSubmit}>
+                <label className="upload-area">
+                  <UploadCloud size={48} style={{ margin: '0 auto 15px', color: '#94a3b8' }} />
+                  <p style={{ color: '#475569', fontWeight: 600, fontSize: '1.1rem' }}>Tap or Click to Select Documents / Media</p>
+                  <p style={{ color: '#94a3b8', fontSize: '0.9rem', marginTop: '5px' }}>Supported formats: Images & Videos</p>
+                  <input
+                    type="file"
+                    accept="image/*,video/*"
+                    multiple
+                    onChange={handleMediaSelect}
+                    style={{ display: "none" }}
+                  />
+                </label>
+
+                {mediaFiles.length > 0 && (
+                  <div className="upload-preview-grid">
+                    {mediaFiles.map((file, idx) => {
+                      const url = URL.createObjectURL(file);
+                      return (
+                        <div key={idx} className="upload-preview-item">
+                          {file.type.startsWith("image") ? (
+                            <img src={url} alt="preview" />
+                          ) : (
+                            <video src={url} />
+                          )}
+                          <button
+                             type="button"
+                             onClick={() => removeMedia(idx)}
+                             className="remove-media-btn"
+                          >
+                            <X size={16} color="#ef4444" />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <textarea
+                  placeholder="Provide a detailed description or caption for this data..."
+                  value={caption}
+                  onChange={(e) => setCaption(e.target.value)}
+                  className="post-textarea"
+                />
+
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="submit-post-btn"
+                >
+                  {submitting ? "Processing Upload..." : "Submit to Dashboard"}
+                </button>
+              </form>
+            )}
+          </div>
         </div>
-      </footer>
+      )}
+
+      {/* Add Announcement Modal */}
+      {showAnnouncementModal && (
+        <div className="modal-overlay" onClick={() => setShowAnnouncementModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setShowAnnouncementModal(false)}>
+              <X size={24} />
+            </button>
+            <h2 className="modal-title">Broadcast Announcement</h2>
+            <p className="modal-subtitle">Push a live scrolling message to all village residents.</p>
+            
+            {successMessage && !announcementSubmitting ? (
+              <div style={{ textAlign: 'center', padding: '40px 0', color: '#16a34a' }}>
+                <CheckCircle size={72} style={{ margin: '0 auto 20px' }} />
+                <h3 style={{ fontSize: '1.5rem', fontWeight: '700' }}>{successMessage}</h3>
+              </div>
+            ) : (
+              <form onSubmit={handleAnnouncementSubmit}>
+                <div style={{ marginBottom: "20px" }}>
+                  <label style={{ display: "block", marginBottom: "8px", fontWeight: "600", color: "#334155" }}>Announcement Type</label>
+                  <select 
+                    value={announcementType} 
+                    onChange={(e) => setAnnouncementType(e.target.value)}
+                    className="post-textarea"
+                    style={{ minHeight: "auto", padding: "12px", borderRadius: "12px" }}
+                  >
+                    <option value="New">New</option>
+                    <option value="Info">Info</option>
+                    <option value="Alert">Alert</option>
+                  </select>
+                </div>
+                <div style={{ marginBottom: "20px" }}>
+                  <label style={{ display: "block", marginBottom: "8px", fontWeight: "600", color: "#334155" }}>Message</label>
+                  <textarea
+                    placeholder="Enter the announcement message to broadcast..."
+                    value={announcementMessage}
+                    onChange={(e) => setAnnouncementMessage(e.target.value)}
+                    className="post-textarea"
+                    required
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={announcementSubmitting}
+                  className="submit-post-btn"
+                >
+                  {announcementSubmitting ? "Broadcasting..." : "Broadcast Message"}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
-};
-// Styles
-const styles = {
-  wrapper: {
-    fontFamily: "Segoe UI, sans-serif",
-    minHeight: "100vh",
-    color: "#fff",
-  },
-  header: {
-    position: "relative", // ✅ needed so birds position inside header
-    height: "73vh",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "40px",
-    borderBottomLeftRadius: "24px",
-    borderBottomRightRadius: "24px",
-    overflow: "hidden",
-    backgroundColor: "#1d3a90",
-  },
-  headerContent: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    alignItems: "center",
-    gap: "10px",
-    maxWidth: "1200px",
-    width: "118%",
-    height: "100%",
-  },
-  headerImage: {
-    width: "140%",
-    height: "100%",
-    objectFit: "contain",
-    display: "block",
-  },
-  headerTitle: { fontSize: "52px", fontWeight: "700", marginBottom: "16px" },
-  headerSubtitle: { fontSize: "20px", color: "#cbd5e1" },
-
-  infoSection: {
-    maxWidth: "1200px",
-    margin: "0 auto",
-    padding: "80px 20px",
-    display: "flex",
-    flexDirection: "column",
-    gap: "80px",
-    backgroundColor: "#fff",
-    color: "#111827",
-  },
-  infoSectionTitle: {
-    fontSize: "38px",
-    fontWeight: "800",
-    color: "#1e3a8a",
-    textAlign: "center",
-    marginBottom: "40px",
-    letterSpacing: "-0.5px",
-  },
-  infoRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: "50px",
-    flexWrap: "wrap",
-  },
-  infoImageWrapper: { flex: 1, minWidth: "320px" },
-  infoImage: {
-    width: "100%",
-    borderRadius: "20px",
-    transition: "transform 0.4s ease",
-  },
-  infoText: { flex: 1, minWidth: "320px" },
-  infoTextTitle: {
-    fontSize: "28px",
-    fontWeight: "700",
-    color: "#1e3a8a",
-    marginBottom: "16px",
-  },
-  infoTextBody: {
-    fontSize: "18px",
-    lineHeight: "1.6",
-    color: "#374151",
-    marginBottom: "16px",
-  },
-  infoList: {
-    listStyle: "disc inside",
-    paddingLeft: "0",
-    margin: 0,
-  },
-  infoListItem: {
-    fontSize: "16px",
-    marginBottom: "8px",
-    color: "#4b5563",
-  },
-
-  // Footer
-  footer: {
-    backgroundColor: "#1d3a90",
-    color: "#fff",
-    textAlign: "center",
-    padding: "40px 20px",
-    marginTop: "60px",
-    borderTopLeftRadius: "24px",
-    borderTopRightRadius: "24px",
-  },
-  footerContent: { maxWidth: "800px", margin: "0 auto" },
-  footerTitle: { fontSize: "24px", fontWeight: "700", marginBottom: "12px" },
-  footerText: { fontSize: "16px", color: "#e5e7eb", marginBottom: "16px" },
-  footerCopy: { fontSize: "14px", color: "#9ca3af" },
-
-  main: {
-    backgroundColor: "#f9fafb",
-    color: "#111827",
-    padding: "40px 20px",
-    marginTop: "-60px",
-  },
-  sectionTitle: {
-    fontSize: "28px",
-    fontWeight: "700",
-    marginBottom: "16px",
-    color: "#1e3a8a",
-    textAlign: "center",
-  },
-
-  postCard: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    background: "#fff",
-    borderRadius: "16px",
-    boxShadow: "0 6px 16px rgba(0,0,0,0.15)",
-    marginBottom: "32px",
-    overflow: "hidden",
-    cursor: "pointer",
-    transition: "all 0.3s ease",
-  },
-  postLeft: { padding: "20px", borderRight: "1px solid #e5e7eb" },
-  postRight: { padding: "20px", display: "flex", flexDirection: "column" },
-  postHeader: { display: "flex", alignItems: "center", marginBottom: "12px" },
-  avatar: {
-    width: "50px",
-    height: "50px",
-    borderRadius: "50%",
-    backgroundColor: "#1e3a8a",
-    color: "#fff",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontWeight: "700",
-    marginRight: "12px",
-    fontSize: "20px",
-  },
-  author: { fontWeight: "600", fontSize: "16px" },
-  date: { fontSize: "12px", color: "#6b7280" },
-  caption: { marginBottom: "12px", fontSize: "16px" },
-  mediaWrapper: { marginBottom: "12px" },
-  media: {
-    width: "100%",
-    borderRadius: "12px",
-    maxHeight: "300px",
-    objectFit: "cover",
-    transition: "all 0.3s ease",
-  },
-
-  commentTitle: { fontWeight: "600", marginBottom: "8px" },
-  commentInputRow: { display: "flex", gap: "8px", marginTop: "auto" },
-  input: {
-    flex: 1,
-    padding: "10px 16px",
-    borderRadius: "20px",
-    border: "1px solid #ccc",
-    outline: "none",
-  },
-  sendButton: {
-    backgroundColor: "#1e3a8a",
-    color: "#fff",
-    border: "none",
-    borderRadius: "20px",
-    padding: "10px 18px",
-    cursor: "pointer",
-    fontWeight: "500",
-    transition: "background 0.3s ease",
-  },
-
-  searchBar: {
-    display: "block",
-    margin: "20px auto",
-    width: "100%",
-    maxWidth: "500px",
-    padding: "12px 20px",
-    borderRadius: "30px",
-    border: "1px solid #ccc",
-    outline: "none",
-    fontSize: "16px",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-    transition: "all 0.3s ease",
-  },
-
-  // Birds overlay
-  birdsContainer: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: "100%",
-    pointerEvents: "none",
-    overflow: "hidden",
-  },
-  bird: {
-    position: "absolute",
-    top: "20%",
-    left: "-10%",
-    width: "60px", // ✅ reduce size here
-    height: "auto", // keep aspect ratio
-    animation: "flyLoop 25s linear infinite",
-    zIndex: 2,
-  },
-
-  bird1: { top: "20%", animationDelay: "0s", width: "50px" },
-  bird2: { top: "40%", animationDelay: "5s", width: "70px" },
-  bird3: { top: "10%", animationDelay: "10s", width: "40px" },
 };
 
 export default Dashboard;
