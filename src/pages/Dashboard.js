@@ -11,7 +11,9 @@ import {
   query,
   orderBy,
   limit,
-  onSnapshot
+  where,
+  onSnapshot,
+  deleteDoc
 } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import {
@@ -34,7 +36,8 @@ import {
   TrendingUp,
   BarChart2,
   PieChart,
-  Bell
+  Bell,
+  Trash2
 } from "lucide-react";
 import "./Dashboard.css";
 
@@ -66,6 +69,7 @@ const Dashboard = () => {
   const [announcementType, setAnnouncementType] = useState("Info");
   const [announcementMessage, setAnnouncementMessage] = useState("");
   const [announcementSubmitting, setAnnouncementSubmitting] = useState(false);
+  const [userAnnouncements, setUserAnnouncements] = useState([]);
 
   const tips = [
     "Save water by fixing leaks promptly.",
@@ -165,6 +169,25 @@ const Dashboard = () => {
     });
     return () => unsubscribe();
   }, []);
+
+  // Fetch User's Announcements
+  useEffect(() => {
+    if (!user) return;
+    const q = query(
+      collection(db, "announcements"),
+      where("userId", "==", user.uid)
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetched = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      // Sort manually since we didn't index userId and createdAt together
+      fetched.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+      setUserAnnouncements(fetched);
+    });
+    return () => unsubscribe();
+  }, [user]);
 
   const fetchStats = async () => {
     try {
@@ -269,6 +292,10 @@ const Dashboard = () => {
   const handleAnnouncementSubmit = async (e) => {
     e.preventDefault();
     if (!announcementMessage.trim()) return;
+    if (userAnnouncements.length >= 3) {
+      alert("You can only add up to 3 announcements. Please delete an existing one first.");
+      return;
+    }
     setAnnouncementSubmitting(true);
     try {
       await addDoc(collection(db, "announcements"), {
@@ -289,6 +316,17 @@ const Dashboard = () => {
       alert("Failed to submit announcement.");
     } finally {
       setAnnouncementSubmitting(false);
+    }
+  };
+
+  const handleDeleteAnnouncement = async (id) => {
+    if (window.confirm("Are you sure you want to delete this announcement?")) {
+      try {
+        await deleteDoc(doc(db, "announcements", id));
+      } catch (error) {
+        console.error("Error deleting announcement:", error);
+        alert("Failed to delete announcement.");
+      }
     }
   };
 
@@ -372,17 +410,6 @@ const Dashboard = () => {
                 <>
                   {announcements.map((ann, idx) => (
                     <React.Fragment key={idx}>
-                      <span>
-                        <strong style={{ color: ann.type === 'Alert' ? '#ef4444' : ann.type === 'Info' ? '#10b981' : '#3b82f6' }}>
-                          {ann.type}:
-                        </strong> {ann.message}
-                      </span>
-                      <span className="broadcast-separator">•</span>
-                    </React.Fragment>
-                  ))}
-                  {/* Duplicate for infinite loop */}
-                  {announcements.map((ann, idx) => (
-                    <React.Fragment key={`dup-${idx}`}>
                       <span>
                         <strong style={{ color: ann.type === 'Alert' ? '#ef4444' : ann.type === 'Info' ? '#10b981' : '#3b82f6' }}>
                           {ann.type}:
@@ -675,12 +702,41 @@ const Dashboard = () => {
 
                 <button
                   type="submit"
-                  disabled={announcementSubmitting}
+                  disabled={announcementSubmitting || userAnnouncements.length >= 3}
                   className="submit-post-btn"
+                  style={userAnnouncements.length >= 3 ? { background: '#cbd5e1', cursor: 'not-allowed' } : {}}
                 >
-                  {announcementSubmitting ? "Broadcasting..." : "Broadcast Message"}
+                  {announcementSubmitting ? "Broadcasting..." : userAnnouncements.length >= 3 ? "Limit Reached (3/3)" : "Broadcast Message"}
                 </button>
               </form>
+            )}
+
+            {/* Show existing announcements to allow deletion */}
+            {!successMessage && (
+              <div className="user-announcements-list" style={{ marginTop: "30px", borderTop: "1px solid #e2e8f0", paddingTop: "20px" }}>
+                <h3 style={{ fontSize: "1.1rem", fontWeight: "700", marginBottom: "15px", color: "#1e293b" }}>Your Active Announcements ({userAnnouncements.length}/3)</h3>
+                {userAnnouncements.length === 0 ? (
+                  <p style={{ color: "#64748b", fontSize: "0.95rem" }}>You haven't posted any announcements yet.</p>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxHeight: "200px", overflowY: "auto", paddingRight: "5px" }}>
+                    {userAnnouncements.map((ann) => (
+                      <div key={ann.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "#f8fafc", padding: "12px 16px", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
+                        <div style={{ flex: 1, marginRight: "15px" }}>
+                          <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: "20px", fontSize: "0.75rem", fontWeight: "700", marginBottom: "6px", background: ann.type === 'Alert' ? '#fee2e2' : ann.type === 'Info' ? '#d1fae5' : '#dbeafe', color: ann.type === 'Alert' ? '#ef4444' : ann.type === 'Info' ? '#10b981' : '#3b82f6' }}>{ann.type}</span>
+                          <p style={{ margin: 0, fontSize: "0.95rem", color: "#334155", display: "-webkit-box", WebkitLineClamp: "2", WebkitBoxOrient: "vertical", overflow: "hidden" }}>{ann.message}</p>
+                        </div>
+                        <button 
+                          onClick={() => handleDeleteAnnouncement(ann.id)}
+                          style={{ background: "#fee2e2", color: "#ef4444", border: "none", width: "36px", height: "36px", borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", transition: "all 0.2s" }}
+                          title="Delete Announcement"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>
