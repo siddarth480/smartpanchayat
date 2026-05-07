@@ -18,6 +18,7 @@ import {
   MdOutlineUploadFile,
   MdEventNote,
   MdPostAdd,
+  MdOutlinePhotoLibrary,
 } from "react-icons/md"; 
 
 const Navbar = ({ user, onLogout }) => {
@@ -114,27 +115,17 @@ const Navbar = ({ user, onLogout }) => {
         icon: <MdMiscellaneousServices size={22} />,
       },
       { to: "/posts", label: "Posts", icon: <MdPostAdd size={22} /> },
+      { to: "/memories", label: "Memories", icon: <MdOutlinePhotoLibrary size={22} /> },
     ];
     const roleTabs = {
-      villager: [
-        {
-          to: "/certificates",
-          label: "Certificates", // ✅ changed name
-          icon: <MdOutlineUploadFile size={22} />, // 📜 better icon for certificates
-        },
-      ],
-
+      
       operator: [
         {
           to: "/notify",
           label: "Notify", // ✅ renamed from "Manage"
           icon: <AiOutlineBell size={22} />, // ✅ better suited for notifications
         },
-        {
-          to: "/certificate-requests",
-          label: "Certificate Requests",
-          icon: <MdOutlineUploadFile size={22} />,
-        },
+         
       ],
       member: [
         {

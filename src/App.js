@@ -52,6 +52,9 @@ import CertificateRequests from "./pages/CertificateRequests"; // for operator
 // Member: Search Family
 import SearchFamily from "./pages/SearchFamily";
 
+// Memories
+import Memories from "./pages/Memories";
+
 //payment
 import OnlinePayment from "./pages/PaymentPage";
 import OperatorPayments from "./pages/OperatorPaymentManage";
@@ -129,6 +132,8 @@ function AppWrapper() {
     // ===== CERTIFICATES =====
     else if (path === "/certificates") title = "Certificates";
     else if (path === "/certificate-requests") title = "Certificate Requests";
+    // ===== MEMORIES =====
+    else if (path === "/memories") title = "Memories";
     // ===== PAYMENTS =====
     else if (path === "/payment") title = "Online Payment";
     else if (path === "/operator/payments") title = "Payment Records";
@@ -268,6 +273,12 @@ function AppWrapper() {
         <Route
           path="/services"
           element={user ? <Services user={user} /> : <Navigate to="/login" />}
+        />
+
+        {/* Memories */}
+        <Route
+          path="/memories"
+          element={user ? <Memories user={user} /> : <Navigate to="/login" />}
         />
 
         {/* Complaints */}

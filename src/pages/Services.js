@@ -2,39 +2,51 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
-  FaClipboardList,
-  FaHandsHelping,
-  FaUsers,
-  FaMoneyBill,
-  FaTrash,
-  FaComments,
-  FaArrowRight,
-  FaVoteYea,
-} from "react-icons/fa";
+  ClipboardList,
+  HeartHandshake,
+  Users,
+  Banknote,
+  Trash2,
+  MessageSquare,
+  ArrowRight,
+  Vote,
+  Search,
+  Landmark,
+  ShieldAlert,
+  CalendarCheck,
+  FileText,
+  FileSignature
+} from "lucide-react";
+import "./Services.css";
 
 const Services = ({ user }) => {
   const navigate = useNavigate();
   const role = user?.role || "villager";
-  const [current, setCurrent] = useState(0);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Carousel Data
   const slides = [
     {
-      src: "https://images.unsplash.com/photo-1506784365847-bbad939e9335?auto=format&fit=crop&w=1600&q=80",
+      src: "/digital_panchayat_office_1778152566768.png",
       title: "Digital Grampanchayat",
-      subtitle:
-        "Empowering villages through smart governance and transparency.",
+      subtitle: "Empowering villages through smart governance and transparency.",
     },
     {
-      src: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1600&q=80",
+      src: "/transparent_village_governance_1778152632290.png",
       title: "Transparent Governance",
       subtitle: "Track village schemes, budgets, and events in real-time.",
     },
+    {
+      src: "/community_village_gathering_1778152695389.png",
+      title: "Community First",
+      subtitle: "Participate in polls, report issues, and shape the future of your village.",
+    }
   ];
 
   useEffect(() => {
     const interval = setInterval(
-      () => setCurrent((prev) => (prev + 1) % slides.length),
+      () => setCurrentSlide((prev) => (prev + 1) % slides.length),
       5000
     );
     return () => clearInterval(interval);
@@ -45,6 +57,10 @@ const Services = ({ user }) => {
       villager: "/complaints",
       operator: "/services/operator-complaints",
       member: "/services/acknowledge",
+    },
+    certificates: {
+      villager: "/certificates",
+      operator: "/certificate-requests",
     },
     schemes: {
       villager: "/schemes",
@@ -85,17 +101,12 @@ const Services = ({ user }) => {
   const handleNavigate = (key) => {
     const baseRoute = pathMap[key]?.[role];
 
-    if (!baseRoute) return; // Safety check
+    if (!baseRoute) return;
 
     if (key === "meeting") {
-      // Generate an ID based on today's date (e.g., "2025-12-31")
       const todayId = new Date().toISOString().split("T")[0];
-
-      // This combines the path from pathMap with the ID
-      // Example Result: /meetings/live-view/2025-12-31
       navigate(`${baseRoute}/${todayId}`);
     } else {
-      // Regular navigation for all other services
       navigate(baseRoute);
     }
   };
@@ -106,49 +117,56 @@ const Services = ({ user }) => {
         key: "complaint",
         title: "Raise Complaint",
         desc: "Report issues regarding water, roads, or electricity.",
-        icon: <FaClipboardList />,
+        icon: ShieldAlert,
         color: "#6366f1",
+      },
+      {
+        key: "certificates",
+        title: "Certificates",
+        desc: "Apply for and download Birth and Death certificates.",
+        icon: FileText,
+        color: "#2563eb",
       },
       {
         key: "schemes",
         title: "Apply for Scheme",
         desc: "Browse and apply for govt welfare schemes.",
-        icon: <FaHandsHelping />,
+        icon: HeartHandshake,
         color: "#10b981",
       },
       {
         key: "events",
         title: "Village Events",
         desc: "Stay updated on local festivals and meetings.",
-        icon: <FaUsers />,
+        icon: CalendarCheck,
         color: "#f59e0b",
       },
       {
         key: "budget",
         title: "View Budget",
         desc: "Monitor annual village fund expenditures.",
-        icon: <FaMoneyBill />,
+        icon: Landmark,
         color: "#3b82f6",
       },
       {
         key: "garbage",
         title: "Waste Management",
-        desc: "Request home pickup, track collection vehicles, and report village blackspots.",
-        icon: <FaTrash />,
-        color: "#10b981", // Changed to green for eco-friendly look
+        desc: "Request home pickup, track collection vehicles, and report blackspots.",
+        icon: Trash2,
+        color: "#10b981",
       },
       {
         key: "payment",
         title: "Online Payment",
         desc: "Securely pay house and water taxes online.",
-        icon: <FaMoneyBill />,
+        icon: Banknote,
         color: "#8b5cf6",
       },
       {
         key: "meeting",
         title: "Live Meeting",
         desc: "Watch live Panchayat meetings with AI summaries.",
-        icon: <FaComments />,
+        icon: MessageSquare,
         color: "#8b5cf6",
       },
 
@@ -156,7 +174,7 @@ const Services = ({ user }) => {
         key: "polls",
         title: "Democratic Polls",
         desc: "Vote on village development projects and community decisions.",
-        icon: <FaVoteYea />,
+        icon: Vote,
         color: "#ef4444",
       },
     ],
@@ -165,56 +183,63 @@ const Services = ({ user }) => {
         key: "complaint",
         title: "Manage Issues",
         desc: "Track, assign, and resolve villager complaints.",
-        icon: <FaClipboardList />,
+        icon: ClipboardList,
         color: "#6366f1",
+      },
+      {
+        key: "certificates",
+        title: "Certificate Requests",
+        desc: "Review and approve villager certificate applications.",
+        icon: FileSignature,
+        color: "#2563eb",
       },
       {
         key: "schemes",
         title: "Manage Schemes",
         desc: "Update eligibility and add new village schemes.",
-        icon: <FaHandsHelping />,
+        icon: HeartHandshake,
         color: "#10b981",
       },
       {
         key: "events",
         title: "Manage Events",
         desc: "Organize community programs and sessions.",
-        icon: <FaUsers />,
+        icon: CalendarCheck,
         color: "#f59e0b",
       },
       {
         key: "budget",
         title: "Manage Budget",
         desc: "Upload and maintain official financial records.",
-        icon: <FaMoneyBill />,
+        icon: Landmark,
         color: "#3b82f6",
       },
       {
         key: "garbage",
         title: "Duty Dashboard",
-        desc: "View pending pickup requests and manage daily collection routes.",
-        icon: <FaTrash />,
+        desc: "View pending pickup requests and manage daily routes.",
+        icon: Trash2,
         color: "#ef4444",
       },
       {
         key: "payment",
         title: "Payment Records",
         desc: "Verify and manage villager tax payments.",
-        icon: <FaMoneyBill />,
+        icon: Banknote,
         color: "#8b5cf6",
       },
       {
         key: "meeting",
         title: "Meeting AI",
         desc: "Start AI transcription and summarization for meetings.",
-        icon: <FaComments />,
+        icon: MessageSquare,
         color: "#8b5cf6",
       },
       {
         key: "polls",
         title: "Manage Polls",
         desc: "Create new community polls and set voting dates.",
-        icon: <FaVoteYea />,
+        icon: Vote,
         color: "#ef4444",
       },
     ],
@@ -223,49 +248,49 @@ const Services = ({ user }) => {
         key: "complaint",
         title: "Complaint Review",
         desc: "Acknowledge and oversee resolution progress.",
-        icon: <FaClipboardList />,
+        icon: ClipboardList,
         color: "#6366f1",
       },
       {
         key: "schemes",
         title: "Scheme Status",
         desc: "Monitor approval rates for applications.",
-        icon: <FaHandsHelping />,
+        icon: HeartHandshake,
         color: "#10b981",
       },
       {
         key: "events",
         title: "Village Events",
         desc: "Participate in festivals and gatherings.",
-        icon: <FaUsers />,
+        icon: CalendarCheck,
         color: "#f59e0b",
       },
       {
         key: "budget",
         title: "View Budget",
         desc: "Detailed access to fund usage and reports.",
-        icon: <FaMoneyBill />,
+        icon: Landmark,
         color: "#3b82f6",
       },
       {
         key: "garbage",
         title: "Sanitation Oversight",
-        desc: "Monitor village cleanliness, operator efficiency, and resolve waste complaints.",
-        icon: <FaTrash />,
+        desc: "Monitor village cleanliness and operator efficiency.",
+        icon: Trash2,
         color: "#3b82f6",
       },
       {
         key: "meeting",
         title: "Meeting Portal",
         desc: "Access live meeting transcripts and AI decisions.",
-        icon: <FaComments />,
+        icon: MessageSquare,
         color: "#8b5cf6",
       },
       {
         key: "polls",
         title: "Poll Analytics",
         desc: "View community consensus and live voting results.",
-        icon: <FaVoteYea />,
+        icon: Vote,
         color: "#ef4444",
       },
     ],
@@ -274,161 +299,108 @@ const Services = ({ user }) => {
         key: "messages",
         title: "Villager Messages",
         desc: "Respond to expert queries and give guidance.",
-        icon: <FaComments />,
+        icon: MessageSquare,
         color: "#6366f1",
       },
       {
         key: "events",
         title: "Join Discussions",
         desc: "Engage in live village awareness programs.",
-        icon: <FaUsers />,
+        icon: Users,
         color: "#f59e0b",
       },
     ],
   };
 
   const services = servicesByRole[role] || [];
+  
+  const filteredServices = services.filter(service => 
+    service.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    service.desc.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <div
-      style={{
-        background: "#f8fafc",
-        minHeight: "100vh",
-        fontFamily: "'Inter', sans-serif",
-        marginTop: "70px",
-      }}
-    >
+    <div className="services-page-wrapper">
       
-      {/* --- DASHBOARD CONTENT --- */}
-      <main
-        style={{
-          maxWidth: "1200px",
-          margin: "0 auto",
-          padding: "60px 20px 100px",
-        }}
-      >
-        <div
-          style={{
-            marginBottom: "40px",
-            textAlign: "left",
-            borderLeft: "6px solid #2563eb",
-            paddingLeft: "20px",
-          }}
-        >
-          <h2
-            style={{
-              fontSize: "1.8rem",
-              color: "#0f172a",
-              fontWeight: "800",
-              margin: 0,
-            }}
+      {/* Hero Section with Background Carousel */}
+      <section className="services-hero">
+        {slides.map((slide, index) => (
+          <div 
+            key={index} 
+            className={`hero-slide ${index === currentSlide ? 'active' : ''}`}
           >
-            {role.charAt(0).toUpperCase() + role.slice(1)} Dashboard
+            <img src={slide.src} alt={slide.title} className="hero-slide-bg" />
+          </div>
+        ))}
+        <div className="hero-overlay"></div>
+        
+        <div className="hero-content">
+          <h1 className="hero-title">{slides[currentSlide].title}</h1>
+          <p className="hero-subtitle">{slides[currentSlide].subtitle}</p>
+        </div>
+      </section>
+
+      {/* Search/Filter Bar */}
+      <div className="services-search-container">
+        <div className="search-input-wrapper">
+          <Search size={20} className="search-icon" />
+          <input 
+            type="text" 
+            placeholder={`Search ${role} services...`}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="services-search-input"
+          />
+        </div>
+      </div>
+
+      {/* Main Services Grid */}
+      <main className="services-main">
+        <div className="services-header">
+          <h2>
+            <span style={{ textTransform: 'capitalize' }}>{role}</span> <span className="gradient-text">Services Portal</span>
           </h2>
-          <p style={{ color: "#64748b", margin: "5px 0 0", fontSize: "1rem" }}>
-            Access your smart village services
-          </p>
+          <p>Access your designated tools, track progress, and stay engaged.</p>
         </div>
 
-        <div
-          className="services-grid"
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gap: "25px",
-          }}
-        >
-          {services.map((item) => (
-            <motion.div
-              key={item.key}
-              whileHover={{ y: -10 }}
-              onClick={() => handleNavigate(item.key)}
-              style={{
-                background: "#ffffff",
-                borderRadius: "20px",
-                padding: "30px",
-                cursor: "pointer",
-                boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)",
-                display: "flex",
-                flexDirection: "column",
-                border: "1px solid #f1f5f9",
-                transition: "all 0.3s ease",
-              }}
-            >
+        <div className="services-grid">
+          {filteredServices.length > 0 ? (
+            filteredServices.map((item) => (
               <div
-                style={{
-                  width: "55px",
-                  height: "55px",
-                  borderRadius: "14px",
-                  background: `${item.color}15`,
-                  color: item.color,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: "24px",
-                  marginBottom: "20px",
-                }}
+                key={item.key}
+                onClick={() => handleNavigate(item.key)}
+                className="service-card"
               >
-                {item.icon}
+                <div
+                  className="service-icon-box"
+                  style={{
+                    background: `${item.color}15`,
+                    color: item.color,
+                  }}
+                >
+                  <item.icon size={32} />
+                </div>
+
+                <h3 className="service-title">{item.title}</h3>
+
+                <p className="service-desc">{item.desc}</p>
+
+                <div 
+                  className="service-action"
+                  style={{ color: item.color }}
+                >
+                  <span>LAUNCH SERVICE</span>
+                  <ArrowRight size={18} className="service-action-icon" />
+                </div>
               </div>
-
-              <h3
-                style={{
-                  fontSize: "1.25rem",
-                  color: "#1e293b",
-                  marginBottom: "10px",
-                  fontWeight: "700",
-                }}
-              >
-                {item.title}
-              </h3>
-
-              <p
-                style={{
-                  color: "#475569",
-                  fontSize: "0.9rem",
-                  lineHeight: "1.6",
-                  marginBottom: "25px",
-                  flexGrow: 1,
-                }}
-              >
-                {item.desc}
-              </p>
-
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  paddingTop: "15px",
-                  borderTop: "1px solid #f1f5f9",
-                  color: item.color,
-                  fontWeight: "700",
-                  fontSize: "0.8rem",
-                }}
-              >
-                LAUNCH SERVICE <FaArrowRight />
-              </div>
-            </motion.div>
-          ))}
+            ))
+          ) : (
+            <div className="no-services-found">
+              <p>No services found matching "{searchQuery}".</p>
+            </div>
+          )}
         </div>
       </main>
-
-      <style>
-        {`
-          @media (max-width: 1024px) {
-            .services-grid { grid-template-columns: repeat(2, 1fr) !important; }
-          }
-          @media (max-width: 640px) {
-            .services-grid { grid-template-columns: 1fr !important; }
-            main { padding-top: 30px !important; }
-            div[style*="height: 55vh"] { height: 40vh !important; min-height: 300px !important; }
-          }
-          .services-grid > div:hover {
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.08) !important;
-          }
-        `}
-      </style>
     </div>
   );
 };
