@@ -52,6 +52,17 @@ const Memories = ({ user }) => {
     return Object.values(groups).sort((a, b) => new Date(b.date) - new Date(a.date));
   }, [memories]);
 
+  const handleFileSelect = (e) => {
+    const selectedFiles = e.target.files;
+    if (selectedFiles) {
+      const filesArray = [];
+      for (let i = 0; i < selectedFiles.length; i++) {
+        filesArray.push(selectedFiles[i]);
+      }
+      setFiles(filesArray);
+    }
+  };
+
   const uploadToCloudinary = async (file) => {
     const formData = new FormData();
     formData.append("file", file);
@@ -236,14 +247,33 @@ const Memories = ({ user }) => {
                 <label className="file-input-wrapper">
                   <UploadCloud size={40} color="#2563eb" style={{marginBottom: "10px"}} />
                   <div><strong>Click to select images</strong> or drag and drop</div>
-                  <div style={{fontSize:"0.85rem", color:"#64748b", marginTop:"8px"}}>
-                    {files.length > 0 ? `${files.length} file(s) selected` : "Select multiple photos for this event"}
+                  <div style={{fontSize:"0.85rem", color:"#64748b", marginTop:"8px", display: "flex", alignItems: "center", justifyContent: "center", gap: "8px"}}>
+                    {files.length > 0 ? (
+                      <>
+                        <span style={{ color: "#10b981", fontWeight: "600" }}>{files.length} file(s) selected</span>
+                        <button 
+                          type="button" 
+                          className="image-clear-btn"
+                          onClick={(e) => { 
+                            e.preventDefault(); 
+                            e.stopPropagation(); 
+                            setFiles([]); 
+                            const fileInput = document.getElementById('memory-file-input');
+                            if (fileInput) fileInput.value = '';
+                          }} 
+                          title="Clear selection"
+                        >
+                          <X size={14} />
+                        </button>
+                      </>
+                    ) : "Select multiple photos for this event"}
                   </div>
                   <input 
+                    id="memory-file-input"
                     type="file" 
                     multiple 
                     accept="image/*" 
-                    onChange={(e) => setFiles(e.target.files)} 
+                    onChange={handleFileSelect} 
                     style={{display: "none"}} 
                   />
                 </label>
