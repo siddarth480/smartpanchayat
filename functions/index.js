@@ -7,6 +7,10 @@ const crypto = require("crypto");
 
 admin.initializeApp();
 
+// GEMINI CONFIGURATION
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "AIzaSyD2hKmbwXej3pqSotjIdptgW7g_2dpSuHk";
+const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+
 // RAZORPAY CONFIGURATION
 // Replace these with your ACTUAL keys from the Razorpay Dashboard
 const RAZORPAY_KEY_ID = "rzp_test_S0uLIRwkoZzK3m";
@@ -85,7 +89,6 @@ exports.analyzeMeetingVideo = functions
     memory: "2GB",
   })
   .https.onCall(async (data, context) => {
-    // ... (Your existing Gemini code remains exactly as it was)
     if (!context.auth)
       throw new functions.https.HttpsError(
         "unauthenticated",
@@ -100,7 +103,7 @@ exports.analyzeMeetingVideo = functions
       const videoBase64 = Buffer.from(response.data).toString("base64");
       const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-      const prompt = `Context: Digital Secretary Gram Panchayat... (etc)`;
+      const prompt = `Analyze this Panchayat meeting video. Provide a summary with: 1. Main Agenda 2. Key Decisions 3. Action Items. Use ONLY HTML tags (<b>, <ul>, <li>).`;
 
       const result = await model.generateContent([
         { inlineData: { data: videoBase64, mimeType: "video/mp4" } },
@@ -109,15 +112,41 @@ exports.analyzeMeetingVideo = functions
 
       return { summary: result.response.text(), success: true };
     } catch (error) {
+      console.error("AI Analysis Error:", error);
       throw new functions.https.HttpsError("internal", "AI Analysis failed.");
     }
   });
 
 // ============================================================
+// LIVE AUDIO TRANSCRIPTION
+// ============================================================
+exports.processSpeech = functions.https.onCall(async (data, context) => {
+  if (!context.auth) throw new functions.https.HttpsError("unauthenticated", "Login required.");
+  const { audioBase64 } = data;
+  
+  if (!audioBase64) throw new functions.https.HttpsError("invalid-argument", "Audio data missing.");
+  
+  try {
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+    const prompt = "Transcribe this audio segment. Return ONLY the spoken words, no additional commentary, markdown, or formatting.";
+    
+    // Note: The frontend uses MediaRecorder, which defaults to webm on Chrome.
+    const result = await model.generateContent([
+      { inlineData: { data: audioBase64, mimeType: "audio/webm" } },
+      prompt,
+    ]);
+    
+    return { text: result.response.text(), success: true };
+  } catch (error) {
+    console.error("Transcription error:", error);
+    throw new functions.https.HttpsError("internal", "Transcription failed.");
+  }
+});
+
+// ============================================================
 // 3. EXPERT USER LOGIC
 // ============================================================
 exports.createExpertUser = functions.https.onCall(async (data, context) => {
-  // ... (Your existing Expert creation code remains exactly as it was)
   const { fullName, email, password, expertise } = data;
   if (!context.auth)
     throw new functions.https.HttpsError("unauthenticated", "Unauthorized.");

@@ -12,16 +12,19 @@ import {
 } from "firebase/firestore";
 import { db, auth } from "../firebase/firebase";
 import { useNavigate, useLocation } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   User,
   Fingerprint,
   Phone,
-  MapPin,
+  Building,
   ShieldCheck,
   AlertCircle,
   Loader2,
   CheckCircle2,
-  FileText,
+  CheckSquare,
+  Square,
+  ArrowLeft
 } from "lucide-react";
 
 const ApplyScheme = () => {
@@ -33,8 +36,13 @@ const ApplyScheme = () => {
   const [aadhaar, setAadhaar] = useState("");
   const [mobile, setMobile] = useState("");
   const [userArea, setUserArea] = useState("");
+  
   const [fetchingProfile, setFetchingProfile] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [declarationChecked, setDeclarationChecked] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [refNumber, setRefNumber] = useState("");
+
   const [isMobile, setIsMobile] = useState(window.innerWidth < 850);
 
   useEffect(() => {
@@ -50,19 +58,10 @@ const ApplyScheme = () => {
 
           if (userSnap.exists()) {
             const data = userSnap.data();
-
-            // 🔹 Setting Name
             setName(data.fullName || user.displayName || "");
-
-            // 🔹 FIX: Setting Aadhaar (Checking multiple common field names)
-            // If your Profile.js saves it as 'aadhaar', this will now find it.
             const profileAadhaar = data.aadhaar || data.aadhaarNumber || "";
             setAadhaar(profileAadhaar);
-
-            // 🔹 Setting Mobile
             setMobile(data.phone || data.mobile || "");
-
-            // 🔹 Setting Area
             setUserArea(data.area || "General Ward");
           }
         } catch (err) {
@@ -77,22 +76,26 @@ const ApplyScheme = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  if (!scheme)
+  if (!scheme) {
     return (
       <div style={styles.loaderBox}>
-        <AlertCircle size={40} color="#EF4444" />
-        <p>Scheme Not Found</p>
+        <AlertCircle size={48} color="#EF4444" />
+        <h2 style={{marginTop: 20, color: '#1E293B'}}>Scheme Not Found</h2>
+        <button style={styles.backBtnLight} onClick={() => navigate('/schemes')}>Return to Schemes</button>
       </div>
     );
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Simple validation before submission
     if (!aadhaar) {
-      alert(
-        "Aadhaar Number is missing from your profile. Please update your profile first."
-      );
+      alert("Aadhaar Number is missing from your profile. Please update your profile first.");
+      return;
+    }
+    
+    if (!declarationChecked) {
+      alert("You must agree to the declaration before submitting.");
       return;
     }
 
@@ -111,202 +114,210 @@ const ApplyScheme = () => {
         schemeTitle: scheme.title,
         userId: userId,
         applicantName: name,
-        aadhaarNumber: aadhaar, // Consistent naming for Member Panel
+        aadhaarNumber: aadhaar,
         mobile: mobile,
         district: userArea,
         status: "pending",
         submittedAt: serverTimestamp(),
       };
 
+      let docRefId = "";
+
       if (!appliedSnap.empty) {
-        await updateDoc(appliedSnap.docs[0].ref, {
+        const docRef = appliedSnap.docs[0].ref;
+        await updateDoc(docRef, {
           ...applicationData,
-          operatorRemark: "", // Clear old remarks
+          operatorRemark: "",
           memberRemark: "",
         });
+        docRefId = docRef.id;
       } else {
-        await addDoc(collection(db, "schemeApplications"), applicationData);
+        const docRef = await addDoc(collection(db, "schemeApplications"), applicationData);
+        docRefId = docRef.id;
       }
-      alert("Application submitted successfully!");
-      navigate("/schemes");
+      
+      setRefNumber(`REF-${Math.floor(100000 + Math.random() * 900000)}-${docRefId.slice(0,4).toUpperCase()}`);
+      setSuccess(true);
+      
     } catch (err) {
+      console.error(err);
       alert("Submission failed. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  if (fetchingProfile)
+  if (fetchingProfile) {
     return (
-      <div style={styles.pageWrapper}>
+      <div style={styles.loaderBox}>
         <Loader2 className="animate-spin" size={40} color="#2563EB" />
-        <p style={{ marginTop: "10px", color: "#64748B" }}>
-          Verifying Identity...
-        </p>
+        <p style={{ marginTop: "16px", color: "#64748B", fontWeight: "500" }}>Authenticating Citizen Identity...</p>
       </div>
     );
+  }
+
+  // If success, render full screen success
+  if (success) {
+    return (
+      <div style={styles.successScreen}>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ type: "spring", stiffness: 200, damping: 20 }}
+          style={styles.successContent}
+        >
+          <div style={styles.successIconWrapper}>
+            <CheckCircle2 size={64} color="#10B981" />
+          </div>
+          <h2 style={styles.successTitle}>Application Submitted Successfully!</h2>
+          <p style={styles.successDesc}>
+            Your application for <strong>{scheme.title}</strong> has been secured and forwarded to the verifying operator.
+          </p>
+          
+          <div style={styles.refBox}>
+            <p style={styles.refLabel}>APPLICATION REFERENCE NUMBER</p>
+            <h3 style={styles.refNumber}>{refNumber}</h3>
+          </div>
+
+          <button style={styles.primaryBtn} onClick={() => navigate('/schemes')}>
+            Track Status on Dashboard
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
-    <div
-      style={{
-        ...styles.pageWrapper,
-        paddingTop: isMobile ? "70px" : "60px",
-      }}
-    >
-      <div
-        style={{
-          ...styles.mainContainer,
-          flexDirection: isMobile ? "column" : "row",
-          maxWidth: isMobile ? "95%" : "800px",
-        }}
-      >
-        {/* LEFT PANEL */}
-        <div
-          style={{
-            ...styles.leftInfoPanel,
-            padding: isMobile ? "25px" : "35px",
-            textAlign: isMobile ? "center" : "left",
-          }}
-        >
-          <div
-            style={
-              isMobile ? { display: "flex", justifyContent: "center" } : {}
-            }
-          >
-            <span style={styles.statusBadge}>
-              <ShieldCheck size={14} /> Official Portal
-            </span>
-          </div>
-          <h1
-            style={{
-              ...styles.mainTitle,
-              fontSize: isMobile ? "20px" : "28px",
-            }}
-          >
-            {scheme.title}
-          </h1>
-          <p style={styles.mainDesc}>
-            Verify your pre-filled identity details before final submission.
-          </p>
+    <div style={{...styles.pageWrapper, flexDirection: isMobile ? "column" : "row"}}>
+      
+      {/* LEFT PANEL - FULL BLEED IMMERSIVE */}
+      <div style={{ ...styles.leftPanel, padding: isMobile ? "100px 30px 40px" : "120px 60px" }}>
+        
+        <button style={styles.ghostBackBtn} onClick={() => navigate(-1)}>
+          <ArrowLeft size={16} /> Back
+        </button>
 
-          <div style={styles.verificationCard}>
-            <h4 style={styles.vTitle}>Security Check</h4>
-            <div style={styles.vItem}>
-              <CheckCircle2 size={16} color={aadhaar ? "#10B981" : "#EF4444"} />
-              <span>
-                Identity:{" "}
-                {aadhaar ? "Verified via Profile" : "Not found in Profile"}
-              </span>
-            </div>
-            <div style={styles.vItem}>
-              <CheckCircle2 size={16} color="#10B981" />{" "}
-              <span>Registered under {userArea}</span>
-            </div>
-            <div style={styles.vItem}>
-              <CheckCircle2 size={16} color="#10B981" />{" "}
-              <span>Panchayat Synced</span>
-            </div>
-          </div>
+        <div style={styles.officialBadge}>
+          <ShieldCheck size={16} /> GOV.IN SECURE
         </div>
-
-        {/* RIGHT PANEL */}
-        <div
-          style={{ ...styles.formPanel, padding: isMobile ? "25px" : "40px" }}
+        
+        <motion.h1 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          style={{...styles.mainTitle, fontSize: isMobile ? "28px" : "40px"}}
         >
-          <form onSubmit={handleSubmit} style={styles.form}>
-            <h3 style={styles.formHeader}>Applicant Details</h3>
+          {scheme.title}
+        </motion.h1>
+        
+        <motion.p 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          style={styles.mainDesc}
+        >
+          Complete your application process. Your identity has been pre-verified through our central registry.
+        </motion.p>
 
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>
-                <User size={14} /> Full Name
-              </label>
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          style={styles.securityBox}
+        >
+          <h4 style={styles.secTitle}>Verification Status</h4>
+          <div style={styles.secItem}>
+            <CheckCircle2 size={18} color={aadhaar ? "#10B981" : "#EF4444"} />
+            <span>Aadhaar KYC: {aadhaar ? "Verified via Profile" : "Missing"}</span>
+          </div>
+          <div style={styles.secItem}>
+            <CheckCircle2 size={18} color="#10B981" />
+            <span>Panchayat Database Linked</span>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* RIGHT PANEL - CLEAN FORM FULL BLEED */}
+      <div style={{ ...styles.rightPanel, padding: isMobile ? "40px 30px" : "120px 80px" }}>
+        
+        <motion.form 
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.3 }}
+          onSubmit={handleSubmit} 
+          style={styles.form}
+        >
+          
+          <div style={styles.formHeader}>
+            <h3 style={styles.formTitle}>Application Details</h3>
+            <p style={styles.formSubtitle}>Review and confirm your pre-filled information.</p>
+          </div>
+
+          <div style={styles.inputGroup}>
+            <label style={styles.label}><User size={16} /> Full Legal Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              style={styles.input}
+              required
+            />
+          </div>
+
+          <div style={{ display: "flex", gap: "20px", flexDirection: isMobile ? "column" : "row" }}>
+            <div style={{ ...styles.inputGroup, flex: 1 }}>
+              <label style={styles.label}><Fingerprint size={16} /> Aadhaar Number</label>
               <input
                 type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                style={styles.input}
+                value={aadhaar}
+                placeholder={fetchingProfile ? "Loading..." : "Not found in profile"}
+                readOnly
+                style={{ ...styles.input, backgroundColor: "#F8FAFC", color: aadhaar ? "#0F172A" : "#EF4444", cursor: "not-allowed", border: "1px solid #E2E8F0" }}
               />
             </div>
+            <div style={{ ...styles.inputGroup, flex: 1 }}>
+              <label style={styles.label}><Phone size={16} /> Registered Mobile</label>
+              <input
+                type="tel"
+                value={mobile}
+                onChange={(e) => setMobile(e.target.value)}
+                style={styles.input}
+                maxLength="10"
+                required
+              />
+            </div>
+          </div>
 
-            <div
-              style={{
-                ...styles.row,
-                flexDirection: isMobile ? "column" : "row",
-              }}
+          <div style={styles.inputGroup}>
+            <label style={styles.label}><Building size={16} /> Panchayat Area / Ward</label>
+            <div style={styles.readonlyDiv}>{userArea}</div>
+          </div>
+
+          {/* DECLARATION CHECKBOX */}
+          <div 
+            style={{...styles.declarationBox, borderColor: declarationChecked ? "#3B82F6" : "#E2E8F0", backgroundColor: declarationChecked ? "#EFF6FF" : "#F8FAFC"}}
+            onClick={() => setDeclarationChecked(!declarationChecked)}
+          >
+            <div style={{color: declarationChecked ? "#2563EB" : "#94A3B8"}}>
+              {declarationChecked ? <CheckSquare size={24} /> : <Square size={24} />}
+            </div>
+            <p style={{...styles.declarationText, color: declarationChecked ? "#1E3A8A" : "#475569"}}>
+              <strong>Official Declaration:</strong> I hereby declare that all the information furnished above is true, complete and correct to the best of my knowledge and belief. I consent to the use of my Aadhaar for identity verification.
+            </p>
+          </div>
+
+          <div style={{ marginTop: "20px" }}>
+            <button
+              type="submit"
+              style={{...styles.submitBtn, opacity: (!aadhaar || !declarationChecked || loading) ? 0.6 : 1}}
+              disabled={loading || !aadhaar || !declarationChecked}
             >
-              <div style={{ ...styles.inputGroup, flex: 1 }}>
-                <label style={styles.label}>
-                  <Fingerprint size={14} /> Aadhaar
-                </label>
-                <input
-                  type="text"
-                  value={aadhaar}
-                  placeholder={
-                    fetchingProfile ? "Loading..." : "Not set in profile"
-                  }
-                  readOnly
-                  style={{
-                    ...styles.input,
-                    backgroundColor: "#F8FAFC",
-                    cursor: "not-allowed",
-                    color: aadhaar ? "#1E293B" : "#EF4444",
-                  }}
-                />
-              </div>
-              <div style={{ ...styles.inputGroup, flex: 1 }}>
-                <label style={styles.label}>
-                  <Phone size={14} /> Mobile
-                </label>
-                <input
-                  type="text"
-                  value={mobile}
-                  onChange={(e) => setMobile(e.target.value)}
-                  style={styles.input}
-                  maxLength="10"
-                />
-              </div>
-            </div>
+              {loading ? <Loader2 className="animate-spin" size={20} /> : "Submit Final Application"}
+            </button>
+          </div>
 
-            <div style={styles.inputGroup}>
-              <label style={styles.label}>
-                <MapPin size={14} /> Area
-              </label>
-              <div style={styles.readonlyField}>{userArea}</div>
-            </div>
-
-            <div style={styles.noticeText}>
-              <FileText size={14} />
-              <span>Ensure profile data is correct before applying.</span>
-            </div>
-
-            <div
-              style={{
-                ...styles.footer,
-                flexDirection: isMobile ? "column-reverse" : "row",
-              }}
-            >
-              <button
-                type="button"
-                style={styles.backBtn}
-                onClick={() => navigate("/schemes")}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                style={styles.submitBtn}
-                disabled={loading || !aadhaar}
-              >
-                {loading ? (
-                  <Loader2 className="animate-spin" size={18} />
-                ) : (
-                  "Final Submission"
-                )}
-              </button>
-            </div>
-          </form>
-        </div>
+        </motion.form>
       </div>
+
     </div>
   );
 };
@@ -315,137 +326,10 @@ const styles = {
   pageWrapper: {
     minHeight: "100vh",
     display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: "20px",
-    backgroundColor: "#F1F5F9",
     fontFamily: "'Inter', sans-serif",
-  },
-  mainContainer: {
-    display: "flex",
-    width: "100%",
-    backgroundColor: "#fff",
-    borderRadius: "32px",
-    overflow: "hidden",
-    boxShadow: "0 20px 40px -10px rgba(0, 0, 0, 0.1)",
-    border: "1px solid #E2E8F0",
-  },
-  leftInfoPanel: {
-    flex: 0.9,
-    background: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)",
-    color: "#fff",
-    display: "flex",
-    flexDirection: "column",
-  },
-  statusBadge: {
-    fontSize: "11px",
-    fontWeight: "700",
-    background: "rgba(59, 130, 246, 0.2)",
-    color: "#60A5FA",
-    padding: "6px 12px",
-    borderRadius: "20px",
-    display: "inline-flex",
-    alignItems: "center",
-    gap: "6px",
-    border: "1px solid rgba(59, 130, 246, 0.3)",
-    marginBottom: "20px",
-  },
-  mainTitle: { fontWeight: "800", marginBottom: "16px", lineHeight: "1.2" },
-  mainDesc: {
-    fontSize: "14px",
-    color: "#94A3B8",
-    lineHeight: "1.5",
-    marginBottom: "30px",
-  },
-  verificationCard: {
-    background: "rgba(255,255,255,0.03)",
-    border: "1px solid rgba(255,255,255,0.1)",
-    borderRadius: "20px",
-    padding: "20px",
-  },
-  vTitle: {
-    fontSize: "12px",
-    color: "#64748B",
-    textTransform: "uppercase",
-    letterSpacing: "1px",
-    marginBottom: "15px",
-  },
-  vItem: {
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    marginBottom: "10px",
-    fontSize: "13px",
-    color: "#CBD5E1",
-  },
-  formPanel: { flex: 1.2, backgroundColor: "#fff" },
-  formHeader: {
-    fontSize: "20px",
-    fontWeight: "700",
-    color: "#1E293B",
-    marginBottom: "25px",
-  },
-  form: { display: "flex", flexDirection: "column", gap: "20px" },
-  row: { display: "flex", gap: "15px" },
-  inputGroup: { display: "flex", flexDirection: "column", gap: "6px" },
-  label: {
-    fontWeight: "600",
-    fontSize: "12px",
-    color: "#64748B",
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-  },
-  input: {
-    padding: "12px 14px",
-    fontSize: "14px",
-    borderRadius: "10px",
-    border: "1px solid #E2E8F0",
-    outline: "none",
-    color: "#1E293B",
-  },
-  readonlyField: {
-    padding: "12px 14px",
-    background: "#F1F5F9",
-    borderRadius: "10px",
-    color: "#475569",
-    fontSize: "14px",
-    fontWeight: "700",
-  },
-  noticeText: {
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    fontSize: "11px",
-    color: "#94A3B8",
-    background: "#F8FAFC",
-    padding: "10px",
-    borderRadius: "10px",
-  },
-  footer: { display: "flex", gap: "12px", marginTop: "10px" },
-  submitBtn: {
-    flex: 2,
-    backgroundColor: "#2563EB",
-    color: "#fff",
-    border: "none",
-    padding: "14px",
-    borderRadius: "12px",
-    fontWeight: "700",
-    cursor: "pointer",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  backBtn: {
-    flex: 1,
-    backgroundColor: "#fff",
-    color: "#64748B",
-    border: "1px solid #E2E8F0",
-    padding: "14px",
-    borderRadius: "12px",
-    fontWeight: "600",
-    cursor: "pointer",
+    backgroundColor: "#FFFFFF",
+    // Make sure it goes behind/below navbar if navbar is fixed
+    position: "relative",
   },
   loaderBox: {
     display: "flex",
@@ -453,7 +337,267 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     height: "100vh",
+    backgroundColor: "#F8FAFC"
   },
+  
+  // LEFT PANEL - FULL BLEED
+  leftPanel: {
+    flex: "0 0 45%",
+    background: "linear-gradient(145deg, #0F172A 0%, #1E3A8A 100%)",
+    color: "#FFFFFF",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    position: "relative",
+  },
+  ghostBackBtn: {
+    position: "absolute",
+    top: "40px",
+    left: "40px",
+    background: "transparent",
+    border: "none",
+    color: "#94A3B8",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    fontSize: "14px",
+    fontWeight: "600",
+    cursor: "pointer",
+    padding: 0,
+    transition: "color 0.2s",
+  },
+  officialBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "8px",
+    background: "rgba(16, 185, 129, 0.15)",
+    border: "1px solid rgba(16, 185, 129, 0.3)",
+    color: "#34D399",
+    padding: "8px 16px",
+    borderRadius: "30px",
+    fontSize: "12px",
+    fontWeight: "700",
+    letterSpacing: "1px",
+    marginBottom: "32px",
+    width: "fit-content",
+  },
+  mainTitle: {
+    fontWeight: "800",
+    lineHeight: "1.1",
+    marginBottom: "24px",
+    letterSpacing: "-1px",
+  },
+  mainDesc: {
+    fontSize: "18px",
+    color: "#94A3B8",
+    lineHeight: "1.6",
+    marginBottom: "48px",
+    maxWidth: "500px",
+  },
+  securityBox: {
+    backgroundColor: "rgba(255,255,255,0.05)",
+    border: "1px solid rgba(255,255,255,0.1)",
+    padding: "32px",
+    borderRadius: "24px",
+    maxWidth: "500px",
+  },
+  secTitle: {
+    fontSize: "14px",
+    color: "#64748B",
+    textTransform: "uppercase",
+    letterSpacing: "1.5px",
+    marginBottom: "24px",
+    marginTop: 0,
+  },
+  secItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: "16px",
+    marginBottom: "16px",
+    fontSize: "15px",
+    fontWeight: "500",
+    color: "#E2E8F0",
+  },
+  
+  // RIGHT PANEL - CLEAN
+  rightPanel: {
+    flex: "1",
+    backgroundColor: "#FFFFFF",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+  },
+  form: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "28px",
+    maxWidth: "650px",
+    width: "100%",
+  },
+  formHeader: {
+    marginBottom: "16px",
+  },
+  formTitle: {
+    fontSize: "28px",
+    fontWeight: "800",
+    color: "#0F172A",
+    margin: "0 0 8px 0",
+    letterSpacing: "-0.5px",
+  },
+  formSubtitle: {
+    fontSize: "16px",
+    color: "#64748B",
+    margin: 0,
+    lineHeight: "1.5",
+  },
+  inputGroup: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+  },
+  label: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    fontSize: "14px",
+    fontWeight: "700",
+    color: "#334155",
+  },
+  input: {
+    padding: "18px",
+    borderRadius: "16px",
+    border: "2px solid #E2E8F0",
+    fontSize: "16px",
+    color: "#0F172A",
+    outline: "none",
+    transition: "all 0.2s ease",
+    fontWeight: "500",
+    backgroundColor: "#F8FAFC",
+  },
+  readonlyDiv: {
+    padding: "18px",
+    borderRadius: "16px",
+    backgroundColor: "#F1F5F9",
+    border: "1px dashed #CBD5E1",
+    fontSize: "16px",
+    color: "#475569",
+    fontWeight: "600",
+  },
+  declarationBox: {
+    display: "flex",
+    alignItems: "flex-start",
+    gap: "16px",
+    padding: "24px",
+    borderRadius: "20px",
+    border: "2px solid",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+    marginTop: "10px",
+  },
+  declarationText: {
+    fontSize: "14px",
+    lineHeight: "1.6",
+    margin: 0,
+  },
+  submitBtn: {
+    width: "100%",
+    backgroundColor: "#0F172A",
+    color: "#FFFFFF",
+    border: "none",
+    padding: "20px",
+    borderRadius: "16px",
+    fontSize: "16px",
+    fontWeight: "700",
+    cursor: "pointer",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    transition: "transform 0.2s, box-shadow 0.2s",
+    boxShadow: "0 10px 25px -5px rgba(15, 23, 42, 0.3)",
+  },
+
+  // FULL SCREEN SUCCESS
+  successScreen: {
+    minHeight: "100vh",
+    backgroundColor: "#F8FAFC",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "20px",
+  },
+  successContent: {
+    maxWidth: "600px",
+    width: "100%",
+    textAlign: "center",
+  },
+  successIconWrapper: {
+    width: "120px",
+    height: "120px",
+    backgroundColor: "#ECFDF5",
+    borderRadius: "60px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    margin: "0 auto 40px",
+    boxShadow: "0 20px 25px -5px rgba(16, 185, 129, 0.1)",
+  },
+  successTitle: {
+    fontSize: "36px",
+    fontWeight: "900",
+    color: "#0F172A",
+    margin: "0 0 20px 0",
+    letterSpacing: "-1px",
+  },
+  successDesc: {
+    fontSize: "18px",
+    color: "#64748B",
+    lineHeight: "1.6",
+    margin: "0 0 40px 0",
+  },
+  refBox: {
+    backgroundColor: "#FFFFFF",
+    border: "2px dashed #E2E8F0",
+    padding: "32px",
+    borderRadius: "24px",
+    marginBottom: "50px",
+    boxShadow: "0 10px 15px -3px rgba(0,0,0,0.02)",
+  },
+  refLabel: {
+    fontSize: "13px",
+    fontWeight: "700",
+    color: "#94A3B8",
+    margin: "0 0 12px 0",
+    letterSpacing: "2px",
+  },
+  refNumber: {
+    fontSize: "32px",
+    fontWeight: "900",
+    color: "#1E3A8A",
+    margin: 0,
+    fontFamily: "monospace",
+    letterSpacing: "4px",
+  },
+  primaryBtn: {
+    backgroundColor: "#2563EB",
+    color: "#FFFFFF",
+    border: "none",
+    padding: "18px 40px",
+    borderRadius: "16px",
+    fontSize: "16px",
+    fontWeight: "700",
+    cursor: "pointer",
+    boxShadow: "0 10px 20px -5px rgba(37, 99, 235, 0.4)",
+  },
+  backBtnLight: {
+    marginTop: "20px",
+    backgroundColor: "transparent",
+    color: "#2563EB",
+    border: "2px solid #2563EB",
+    padding: "12px 24px",
+    borderRadius: "12px",
+    fontWeight: "700",
+    cursor: "pointer",
+  }
 };
 
 export default ApplyScheme;

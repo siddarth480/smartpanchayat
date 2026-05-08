@@ -2,29 +2,29 @@ import React, { useEffect, useState, useMemo } from "react";
 import { collection, query, where, onSnapshot } from "firebase/firestore";
 import { db, auth } from "../firebase/firebase";
 import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Info,
   Send,
   RefreshCcw,
   CheckCircle,
-  ExternalLink,
   AlertCircle,
   Clock,
-  ArrowLeft,
-  Eye,
   XCircle,
   MessageSquare,
   Globe,
   Briefcase,
   History,
   LayoutGrid,
+  ChevronRight,
+  ChevronDown
 } from "lucide-react";
 
 const SchemesList = () => {
   const [schemes, setSchemes] = useState([]);
   const [appliedSchemes, setAppliedSchemes] = useState([]);
   const [activeTab, setActiveTab] = useState("available");
-  const [flippedCards, setFlippedCards] = useState({});
+  const [expandedId, setExpandedId] = useState(null); // For accordion style reason view
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -79,238 +79,196 @@ const SchemesList = () => {
       .filter(Boolean);
   }, [schemes, appliedSchemes]);
 
-  const dataToShow =
-    activeTab === "available" ? availableSchemes : appliedSchemesWithStatus;
+  const dataToShow = activeTab === "available" ? availableSchemes : appliedSchemesWithStatus;
 
-  const toggleFlip = (id) => {
-    setFlippedCards((prev) => ({ ...prev, [id]: !prev[id] }));
+  const toggleExpand = (id) => {
+    setExpandedId(expandedId === id ? null : id);
   };
 
   const getStatusConfig = (status) => {
     switch (status) {
       case "pending_operator":
+      case "pending":
         return {
           label: "Operator Review",
-          icon: <Clock size={14} />,
+          icon: <Clock size={16} />,
           color: "#B45309",
           bg: "#FFFBEB",
+          border: "#FEF3C7"
         };
       case "forwarded":
         return {
           label: "Member Review",
-          icon: <Send size={14} />,
+          icon: <Send size={16} />,
           color: "#4338CA",
           bg: "#EEF2FF",
+          border: "#E0E7FF"
         };
       case "approved":
         return {
           label: "Approved",
-          icon: <CheckCircle size={14} />,
+          icon: <CheckCircle size={16} />,
           color: "#059669",
           bg: "#ECFDF5",
+          border: "#D1FAE5"
         };
       case "rejected_operator":
       case "rejected_member":
         return {
           label: "Rejected",
-          icon: <XCircle size={14} />,
-          color: "#991B1B",
-          bg: "#FEE2E2",
+          icon: <XCircle size={16} />,
+          color: "#E11D48",
+          bg: "#FFF1F2",
+          border: "#FFE4E6"
         };
       case "reapply":
         return {
           label: "Action Required",
-          icon: <RefreshCcw size={14} />,
+          icon: <RefreshCcw size={16} />,
           color: "#DC2626",
           bg: "#FEF2F2",
+          border: "#FECACA"
         };
       default:
         return {
           label: "Active",
-          icon: <Info size={14} />,
-          color: "#374151",
-          bg: "#F3F4F6",
+          icon: <Info size={16} />,
+          color: "#475569",
+          bg: "#F8FAFC",
+          border: "#F1F5F9"
         };
     }
   };
 
   return (
     <div style={styles.pageWrapper}>
-      <div style={styles.container}>
-        {/* 🔹 ENHANCED HEADER WITH ICONS */}
-        <header style={styles.headerSection}>
+      
+      {/* HEADER HERO */}
+      <div style={styles.heroSection}>
+        <div style={styles.heroContainer}>
           <div style={styles.headerIconBox}>
-            <Globe size={32} color="#2563EB" />
+            <Globe size={32} color="#FFFFFF" />
           </div>
           <h1 style={styles.header}>Citizen Scheme Portal</h1>
           <p style={styles.subHeader}>
-            Secure access to government welfare schemes and application tracking
+            Access and track official government welfare programs designed for your benefit.
           </p>
-        </header>
+        </div>
+      </div>
 
-        {/* 🔹 MODERN TABS WITH ICONS */}
+      <div style={styles.mainContainer}>
+        
+        {/* TABS */}
         <div style={styles.tabsWrapper}>
           <div style={styles.tabsContainer}>
             <button
               onClick={() => setActiveTab("available")}
-              style={{
-                ...styles.tab,
-                ...(activeTab === "available" ? styles.activeTab : {}),
-              }}
+              style={{ ...styles.tab, ...(activeTab === "available" ? styles.activeTab : {}) }}
             >
-              <Briefcase size={16} /> Explore Schemes
+              <Briefcase size={18} /> Available Schemes
             </button>
             <button
               onClick={() => setActiveTab("applied")}
-              style={{
-                ...styles.tab,
-                ...(activeTab === "applied" ? styles.activeTab : {}),
-              }}
+              style={{ ...styles.tab, ...(activeTab === "applied" ? styles.activeTab : {}) }}
             >
-              <History size={16} /> My Submissions
+              <History size={18} /> My Applications
             </button>
           </div>
         </div>
 
         {dataToShow.length === 0 ? (
           <div style={styles.emptyState}>
-            <LayoutGrid size={48} color="#CBD5E1" />
-            <p style={styles.emptyText}>No records found in this category.</p>
+            <LayoutGrid size={64} color="#E2E8F0" />
+            <h3 style={styles.emptyTitle}>No records found</h3>
+            <p style={styles.emptyText}>There are currently no schemes in this category.</p>
           </div>
         ) : (
           <div style={styles.grid}>
             {dataToShow.map((scheme) => {
-              const isFlipped = flippedCards[scheme.id];
               const status = getStatusConfig(scheme.status);
               const isRejected = scheme.status?.includes("rejected");
+              const isReapply = scheme.status === "reapply";
               const hasRemark = scheme.operatorRemark || scheme.memberRemark;
+              const isExpanded = expandedId === scheme.id;
 
               return (
-                <div key={scheme.id} style={styles.cardWrapper}>
-                  <div
-                    style={{
-                      ...styles.cardInner,
-                      transform: isFlipped
-                        ? "rotateY(180deg)"
-                        : "rotateY(0deg)",
-                    }}
-                  >
-                    {/* CARD FRONT */}
-                    <div style={styles.cardFront}>
-                      <div style={styles.cardHeader}>
-                        {scheme.status === "reapply" && (
-                          <div style={styles.reapplyLabel}>
-                            <RefreshCcw size={12} /> ACTION REQUIRED
-                          </div>
-                        )}
-                        <h3 style={styles.cardTitle}>{scheme.title}</h3>
+                <motion.div 
+                  layout
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  key={scheme.id} 
+                  style={styles.card}
+                >
+                  <div style={styles.cardTop}>
+                    {isReapply && (
+                      <div style={styles.actionBadge}>
+                        <RefreshCcw size={12} /> ACTION REQUIRED
                       </div>
+                    )}
+                    <h3 style={styles.cardTitle}>{scheme.title}</h3>
+                    <p style={styles.cardDesc}>
+                      {scheme.description?.substring(0, 120)}...
+                    </p>
+                  </div>
 
-                      <p style={styles.cardDesc}>
-                        {scheme.description?.substring(0, 110)}...
-                      </p>
+                  <div style={styles.cardBottom}>
+                    {activeTab === "applied" ? (
+                      <div style={{ ...styles.statusTag, color: status.color, backgroundColor: status.bg, borderColor: status.border }}>
+                        {status.icon} {status.label}
+                      </div>
+                    ) : (
+                      <button style={styles.viewDetailsBtn} onClick={() => navigate(`/schemes/${scheme.id}`)}>
+                        View Full Details
+                      </button>
+                    )}
 
-                      {hasRemark && !isFlipped && (
-                        <div style={styles.remarkIndicator}>
-                          <MessageSquare size={12} /> Note from Reviewer
-                        </div>
+                    <div style={styles.actionRow}>
+                      {(isReapply || isRejected) && hasRemark && (
+                        <button style={styles.reasonBtn} onClick={() => toggleExpand(scheme.id)}>
+                          <MessageSquare size={16} /> 
+                          {isExpanded ? "Hide Note" : "Read Note"}
+                          <ChevronDown size={16} style={{ transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)", transition: "0.2s" }} />
+                        </button>
                       )}
 
-                      <div style={styles.cardFooter}>
-                        {activeTab === "applied" ? (
-                          <div
-                            style={{
-                              ...styles.statusBadge,
-                              color: status.color,
-                              backgroundColor: status.bg,
-                            }}
-                          >
-                            {status.icon} {status.label}
-                          </div>
-                        ) : (
-                          <button
-                            style={styles.viewDetailsBtn}
-                            onClick={() => navigate(`/schemes/${scheme.id}`)}
-                          >
-                            Full Info <ExternalLink size={14} />
-                          </button>
-                        )}
-
-                        <div style={styles.actionRow}>
-                          {(scheme.status === "reapply" || isRejected) && (
-                            <button
-                              style={styles.reasonBtn}
-                              onClick={() => toggleFlip(scheme.id)}
-                            >
-                              <Eye size={14} />{" "}
-                              {isRejected ? "Reason" : "Fix Note"}
-                            </button>
-                          )}
-
-                          {activeTab === "available" && (
-                            <button
-                              style={styles.applyBtn}
-                              onClick={() =>
-                                navigate(`/schemes/${scheme.id}/apply`, {
-                                  state: { scheme },
-                                })
-                              }
-                            >
-                              {scheme.status === "reapply"
-                                ? "Fix & Apply"
-                                : "Apply Now"}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* 🔹 CARD BACK (REASON NOTE) - DARK THEME */}
-                    <div style={styles.cardBack}>
-                      <div style={styles.backContent}>
-                        <AlertCircle
-                          size={40}
-                          color={isRejected ? "#FCA5A5" : "#FDE047"}
-                          style={{ marginBottom: "16px" }}
-                        />
-                        <h4 style={styles.backHeading}>
-                          {isRejected
-                            ? "Rejection Note"
-                            : "Official Instructions"}
-                        </h4>
-
-                        <div style={styles.remarkBox}>
-                          <p style={styles.remarkText}>
-                            {scheme.memberRemark ? (
-                              <>
-                                <span style={{ color: "#94A3B8" }}>
-                                  MEMBER:
-                                </span>{" "}
-                                {scheme.memberRemark}
-                              </>
-                            ) : scheme.operatorRemark ? (
-                              <>
-                                <span style={{ color: "#94A3B8" }}>
-                                  OPERATOR:
-                                </span>{" "}
-                                {scheme.operatorRemark}
-                              </>
-                            ) : (
-                              "No specific instructions provided by the Panchayat."
-                            )}
-                          </p>
-                        </div>
-
-                        <button
-                          style={styles.returnBtn}
-                          onClick={() => toggleFlip(scheme.id)}
+                      {activeTab === "available" && (
+                        <button 
+                          style={styles.applyBtn} 
+                          onClick={() => navigate(`/schemes/${scheme.id}/apply`, { state: { scheme } })}
                         >
-                          <ArrowLeft size={14} /> Return to Info
+                          {isReapply ? "Fix & Submit" : "Apply Now"} <ChevronRight size={16} />
                         </button>
-                      </div>
+                      )}
                     </div>
                   </div>
-                </div>
+
+                  {/* ACCORDION REASON SECTION */}
+                  <AnimatePresence>
+                    {isExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        style={styles.expandedSection}
+                      >
+                        <div style={{...styles.remarkBox, borderColor: isRejected ? "#FECACA" : "#FDE68A", backgroundColor: isRejected ? "#FEF2F2" : "#FFFBEB"}}>
+                          <div style={{display: "flex", gap: "10px", alignItems: "flex-start"}}>
+                            <AlertCircle size={20} color={isRejected ? "#EF4444" : "#F59E0B"} style={{flexShrink: 0}} />
+                            <div>
+                              <h4 style={{...styles.remarkTitle, color: isRejected ? "#991B1B" : "#B45309"}}>
+                                {isRejected ? "Rejection Reason" : "Official Fix Request"}
+                              </h4>
+                              <p style={{...styles.remarkText, color: isRejected ? "#7F1D1D" : "#92400E"}}>
+                                {scheme.memberRemark ? `From Member: ${scheme.memberRemark}` : `From Operator: ${scheme.operatorRemark}`}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                </motion.div>
               );
             })}
           </div>
@@ -324,14 +282,17 @@ const styles = {
   pageWrapper: {
     background: "#F8FAFC",
     minHeight: "100vh",
-    paddingTop: "140px",
-    paddingBottom: "80px",
+    paddingBottom: "100px",
     fontFamily: "'Inter', sans-serif",
   },
-  container: { maxWidth: "1240px", margin: "0 auto", padding: "0 24px" },
-  headerSection: {
+  heroSection: {
+    background: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)",
+    padding: "140px 24px 60px",
     textAlign: "center",
-    marginBottom: "40px",
+  },
+  heroContainer: {
+    maxWidth: "800px",
+    margin: "0 auto",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
@@ -339,247 +300,213 @@ const styles = {
   headerIconBox: {
     width: "64px",
     height: "64px",
-    background: "#EFF6FF",
+    background: "rgba(255,255,255,0.1)",
     borderRadius: "20px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: "20px",
-    border: "1px solid #DBEAFE",
+    marginBottom: "24px",
+    border: "1px solid rgba(255,255,255,0.2)",
   },
   header: {
-    fontSize: "32px",
+    fontSize: "40px",
     fontWeight: "900",
-    color: "#0F172A",
-    margin: 0,
-    letterSpacing: "-0.025em",
+    color: "#FFFFFF",
+    margin: "0 0 16px 0",
+    letterSpacing: "-1px",
   },
   subHeader: {
-    fontSize: "16px",
-    color: "#64748B",
-    marginTop: "10px",
-    maxWidth: "600px",
-    lineHeight: "1.5",
+    fontSize: "18px",
+    color: "#94A3B8",
+    margin: 0,
+    lineHeight: "1.6",
   },
-
+  mainContainer: {
+    maxWidth: "1240px",
+    margin: "-30px auto 0",
+    padding: "0 24px",
+    position: "relative",
+    zIndex: 10,
+  },
   tabsWrapper: {
     display: "flex",
     justifyContent: "center",
-    marginBottom: "50px",
+    marginBottom: "40px",
   },
   tabsContainer: {
     display: "flex",
-    background: "#fff",
-    padding: "6px",
-    borderRadius: "18px",
-    boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)",
+    background: "#FFFFFF",
+    padding: "8px",
+    borderRadius: "20px",
+    boxShadow: "0 10px 25px -5px rgba(0,0,0,0.1)",
     border: "1px solid #E2E8F0",
   },
   tab: {
     display: "flex",
     alignItems: "center",
     gap: "10px",
-    padding: "12px 24px",
+    padding: "16px 32px",
     borderRadius: "14px",
     border: "none",
     background: "transparent",
     cursor: "pointer",
     fontWeight: "700",
-    fontSize: "14px",
+    fontSize: "15px",
     color: "#64748B",
-    transition: "0.3s ease",
+    transition: "all 0.2s ease",
   },
   activeTab: {
     background: "#0F172A",
-    color: "#fff",
-    boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)",
+    color: "#FFFFFF",
   },
-
   grid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))",
-    gap: "28px",
+    gridTemplateColumns: "repeat(auto-fill, minmax(380px, 1fr))",
+    gap: "30px",
   },
-  cardWrapper: { perspective: "1500px", height: "340px" },
-  cardInner: {
-    position: "relative",
-    width: "100%",
-    height: "100%",
-    transition: "transform 0.7s cubic-bezier(0.4, 0, 0.2, 1)",
-    transformStyle: "preserve-3d",
-  },
-
-  cardFront: {
-    position: "absolute",
-    inset: 0,
-    backfaceVisibility: "hidden",
-    background: "#fff",
-    borderRadius: "28px",
-    padding: "30px",
-    display: "flex",
-    flexDirection: "column",
+  card: {
+    background: "#FFFFFF",
+    borderRadius: "24px",
     border: "1px solid #E2E8F0",
     boxShadow: "0 4px 6px -1px rgba(0,0,0,0.02)",
-  },
-  cardBack: {
-    position: "absolute",
-    inset: 0,
-    backfaceVisibility: "hidden",
-    background: "#0F172A",
-    borderRadius: "28px",
-    padding: "30px",
-    transform: "rotateY(180deg)",
-    color: "#fff",
     display: "flex",
     flexDirection: "column",
-    justifyContent: "center",
+    overflow: "hidden",
+    transition: "box-shadow 0.2s ease",
   },
-  backContent: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    textAlign: "center",
+  cardTop: {
+    padding: "32px 32px 20px",
+    flex: 1,
   },
-
-  cardTitle: {
-    fontSize: "20px",
-    fontWeight: "800",
-    color: "#1E293B",
-    marginBottom: "14px",
-    lineHeight: "1.3",
-  },
-  cardDesc: {
-    fontSize: "14px",
-    color: "#64748B",
-    lineHeight: "1.7",
-    flexGrow: 1,
-  },
-  remarkIndicator: {
-    display: "flex",
+  actionBadge: {
+    display: "inline-flex",
     alignItems: "center",
     gap: "6px",
     fontSize: "11px",
-    color: "#2563EB",
     fontWeight: "800",
-    background: "#EFF6FF",
+    color: "#DC2626",
+    background: "#FEF2F2",
     padding: "6px 12px",
-    borderRadius: "8px",
-    width: "fit-content",
-    marginBottom: "15px",
-    textTransform: "uppercase",
+    borderRadius: "20px",
+    letterSpacing: "1px",
+    marginBottom: "16px",
   },
-
-  cardFooter: {
+  cardTitle: {
+    fontSize: "22px",
+    fontWeight: "800",
+    color: "#0F172A",
+    marginBottom: "12px",
+    lineHeight: "1.3",
+  },
+  cardDesc: {
+    fontSize: "15px",
+    color: "#64748B",
+    lineHeight: "1.6",
+    margin: 0,
+  },
+  cardBottom: {
+    padding: "20px 32px 32px",
     display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    borderTop: "1px solid #F1F5F9",
-    paddingTop: "20px",
-  },
-  actionRow: { display: "flex", gap: "10px" },
-
-  applyBtn: {
-    background: "#2563EB",
-    color: "#fff",
-    border: "none",
-    padding: "10px 20px",
-    borderRadius: "12px",
-    fontWeight: "700",
-    cursor: "pointer",
-    fontSize: "13px",
-    transition: "0.2s",
-  },
-  reasonBtn: {
-    background: "#F1F5F9",
-    color: "#475569",
-    border: "none",
-    padding: "10px 20px",
-    borderRadius: "12px",
-    fontWeight: "700",
-    cursor: "pointer",
-    fontSize: "13px",
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
+    flexDirection: "column",
+    gap: "20px",
+    borderTop: "1px solid #F8FAFC",
   },
   viewDetailsBtn: {
     background: "none",
     border: "none",
     color: "#2563EB",
+    fontSize: "15px",
+    fontWeight: "700",
+    cursor: "pointer",
+    padding: 0,
+    textAlign: "left",
+  },
+  statusTag: {
+    padding: "12px 16px",
+    borderRadius: "14px",
     fontSize: "14px",
-    fontWeight: "800",
-    cursor: "pointer",
-    display: "flex",
-    alignItems: "center",
-    gap: "6px",
-  },
-
-  statusBadge: {
-    padding: "8px 14px",
-    borderRadius: "12px",
-    fontSize: "12px",
-    fontWeight: "800",
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-  },
-  reapplyLabel: {
-    fontSize: "10px",
-    fontWeight: "900",
-    color: "#DC2626",
-    letterSpacing: "1px",
-    marginBottom: "10px",
-    display: "flex",
-    alignItems: "center",
-    gap: "6px",
-  },
-
-  backHeading: {
-    fontSize: "15px",
-    fontWeight: "800",
-    color: "#94A3B8",
-    textTransform: "uppercase",
-    letterSpacing: "1px",
-    margin: "14px 0",
-  },
-  remarkBox: {
-    background: "rgba(255,255,255,0.05)",
-    padding: "20px",
-    borderRadius: "16px",
-    border: "1px solid rgba(255,255,255,0.1)",
-    width: "100%",
-    marginBottom: "25px",
-  },
-  remarkText: {
-    fontSize: "15px",
-    color: "#F1F5F9",
-    lineHeight: "1.6",
-    fontStyle: "italic",
-  },
-  returnBtn: {
-    background: "rgba(255,255,255,0.1)",
-    border: "none",
-    color: "#fff",
-    padding: "10px 20px",
-    borderRadius: "12px",
-    cursor: "pointer",
-    fontSize: "13px",
+    fontWeight: "700",
     display: "flex",
     alignItems: "center",
     gap: "10px",
-    fontWeight: "600",
+    border: "1px solid",
   },
-
+  actionRow: {
+    display: "flex",
+    gap: "12px",
+    flexWrap: "wrap",
+  },
+  applyBtn: {
+    flex: 1,
+    background: "#2563EB",
+    color: "#FFFFFF",
+    border: "none",
+    padding: "14px 20px",
+    borderRadius: "14px",
+    fontWeight: "700",
+    fontSize: "15px",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "8px",
+    transition: "background 0.2s",
+  },
+  reasonBtn: {
+    flex: 1,
+    background: "#F1F5F9",
+    color: "#475569",
+    border: "none",
+    padding: "14px 20px",
+    borderRadius: "14px",
+    fontWeight: "700",
+    fontSize: "15px",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "8px",
+  },
+  expandedSection: {
+    padding: "0 32px 32px",
+    overflow: "hidden",
+  },
+  remarkBox: {
+    padding: "20px",
+    borderRadius: "16px",
+    border: "1px solid",
+  },
+  remarkTitle: {
+    margin: "0 0 6px 0",
+    fontSize: "14px",
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: "0.5px",
+  },
+  remarkText: {
+    margin: 0,
+    fontSize: "14px",
+    lineHeight: "1.6",
+    fontWeight: "500",
+  },
   emptyState: {
     textAlign: "center",
-    padding: "120px 0",
-    color: "#94A3B8",
+    padding: "80px 0",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
-    gap: "16px",
   },
-  emptyText: { fontSize: "18px", fontWeight: "500" },
+  emptyTitle: {
+    fontSize: "24px",
+    fontWeight: "800",
+    color: "#0F172A",
+    margin: "24px 0 8px",
+  },
+  emptyText: {
+    fontSize: "16px",
+    color: "#64748B",
+    margin: 0,
+  }
 };
 
 export default SchemesList;

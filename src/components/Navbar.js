@@ -115,7 +115,7 @@ const Navbar = ({ user, onLogout }) => {
         icon: <MdMiscellaneousServices size={22} />,
       },
       { to: "/posts", label: "Posts", icon: <MdPostAdd size={22} /> },
-      { to: "/memories", label: "Memories", icon: <MdOutlinePhotoLibrary size={22} /> },
+      { to: "/memories", label: "Captures", icon: <MdOutlinePhotoLibrary size={22} /> },
     ];
     const roleTabs = {
       
@@ -135,14 +135,7 @@ const Navbar = ({ user, onLogout }) => {
         },
         { to: "/post", label: "Create Post", icon: <MdPostAdd size={22} /> },
       ],
-      expert: [
-        { to: "/meetings", label: "Meetings", icon: <MdEventNote size={22} /> },
-        {
-          to: "/upload",
-          label: "Upload Advice",
-          icon: <MdOutlineUploadFile size={22} />,
-        },
-      ],
+       
     };
     return [...base, ...(roleTabs[user.role] || [])];
   };

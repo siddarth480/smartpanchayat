@@ -114,7 +114,7 @@ const Memories = ({ user }) => {
   return (
     <div className="memories-page">
       <div className="memories-hero">
-        <h1 className="memories-title">Village Memories</h1>
+        <h1 className="memories-title">Village Captures</h1>
         <p className="memories-subtitle">
           A collection of our community's best moments, events, and milestones. Relive the history of our village through these albums.
         </p>

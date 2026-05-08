@@ -12,10 +12,10 @@ import {
   ArrowRight,
   History,
 } from "lucide-react";
-import { getFunctions, httpsCallable } from "firebase/functions";
+import { httpsCallable } from "firebase/functions";
 import { motion } from "framer-motion";
 
-import { auth, db } from "../firebase/firebase";
+import { auth, db, functions } from "../firebase/firebase";
 import {
   signInAnonymously,
   signInWithCustomToken,
@@ -208,6 +208,7 @@ const PaymentPage = () => {
   const [loading, setLoading] = useState(true);
   const [payingBillId, setPayingBillId] = useState(null); // LOGIC CHANGE: Track ID, not boolean
   const [error, setError] = useState(null);
+  const [successMsg, setSuccessMsg] = useState(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -246,9 +247,9 @@ const PaymentPage = () => {
 
     setPayingBillId(bill.id);
     setError(null);
+    setSuccessMsg(null);
 
     try {
-      const functions = getFunctions(); // Add region if necessary, e.g., getFunctions(undefined, 'asia-south1')
       const createOrder = httpsCallable(functions, "createOrder");
       const verifyPayment = httpsCallable(functions, "verifyPayment");
 
@@ -278,8 +279,11 @@ const PaymentPage = () => {
             });
             // Note: The onSnapshot listener in your useEffect will
             // automatically update the UI when Firestore changes.
-            alert("Payment Successful!");
+            setPayingBillId(null);
+            setSuccessMsg("Payment verified successfully! Receipt has been updated.");
+            setTimeout(() => setSuccessMsg(null), 5000);
           } catch (err) {
+            setPayingBillId(null);
             setError("Verification failed. Please contact admin.");
           }
         },
@@ -378,6 +382,27 @@ const PaymentPage = () => {
             }}
           >
             <XCircle size={20} /> {error}
+          </motion.div>
+        )}
+
+        {successMsg && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            style={{
+              background: "#f0fdf4",
+              border: "1px solid #dcfce7",
+              padding: "16px",
+              borderRadius: "12px",
+              marginBottom: "32px",
+              color: "#16a34a",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+              fontWeight: "500",
+            }}
+          >
+            <CheckCircle size={20} /> {successMsg}
           </motion.div>
         )}
 

@@ -302,13 +302,7 @@ const Services = ({ user }) => {
         icon: MessageSquare,
         color: "#6366f1",
       },
-      {
-        key: "events",
-        title: "Join Discussions",
-        desc: "Engage in live village awareness programs.",
-        icon: Users,
-        color: "#f59e0b",
-      },
+       
     ],
   };
 

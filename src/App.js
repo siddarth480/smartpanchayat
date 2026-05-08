@@ -132,8 +132,8 @@ function AppWrapper() {
     // ===== CERTIFICATES =====
     else if (path === "/certificates") title = "Certificates";
     else if (path === "/certificate-requests") title = "Certificate Requests";
-    // ===== MEMORIES =====
-    else if (path === "/memories") title = "Memories";
+    // ===== CAPTURES =====
+    else if (path === "/memories") title = "Captures";
     // ===== PAYMENTS =====
     else if (path === "/payment") title = "Online Payment";
     else if (path === "/operator/payments") title = "Payment Records";

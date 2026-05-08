@@ -18,7 +18,6 @@ import {
   FaTrashAlt,
 } from "react-icons/fa";
 import { useParams } from "react-router-dom";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Cloudinary Config
 const CLOUDINARY_UPLOAD_PRESET = "sid111";
@@ -30,6 +29,7 @@ const MeetingDashboard = ({ user }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
   const role = user?.role || "villager";
 
   const mediaRecorderRef = useRef(null);
@@ -39,6 +39,7 @@ const MeetingDashboard = ({ user }) => {
     if (role === "operator") {
       getDoc(docRef).then((snap) => {
         if (!snap.exists()) {
+          console.log("Document does not exist. Creating...");
           setDoc(docRef, {
             title: `Panchayat Meeting: ${meetingId}`,
             transcript: "",
@@ -46,12 +47,30 @@ const MeetingDashboard = ({ user }) => {
             videoUrl: "",
             status: "active",
             createdAt: new Date().toISOString(),
-          });
+          }).then(() => console.log("Meeting created successfully"))
+            .catch(err => {
+              console.error("Error creating meeting:", err);
+              setErrorMsg("Failed to create meeting data.");
+            });
+        } else {
+          console.log("Document already exists.");
         }
+      }).catch(err => {
+        console.error("Error fetching meeting:", err);
+        setErrorMsg("Failed to connect to database.");
       });
     }
     const unsub = onSnapshot(docRef, (doc) => {
-      if (doc.exists()) setMeetingData(doc.data());
+      if (doc.exists()) {
+        setMeetingData(doc.data());
+      } else {
+        if (role !== "operator") {
+          setErrorMsg("Meeting hasn't been started by the operator yet.");
+        }
+      }
+    }, (error) => {
+      console.error("Snapshot error:", error);
+      setErrorMsg("Error listening to meeting updates.");
     });
     return () => unsub();
   }, [meetingId, role]);
@@ -109,34 +128,27 @@ const MeetingDashboard = ({ user }) => {
   const handleAIAnalysis = async () => {
     if (!meetingData.videoUrl) return alert("Please upload a video first.");
     setIsAnalyzing(true);
+    
     try {
-      const genAI = new GoogleGenerativeAI(
-        "AIzaSyD2hKmbwXej3pqSotjIdptgW7g_2dpSuHk"
-      );
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-      const response = await fetch(meetingData.videoUrl);
-      const blob = await response.blob();
-      const reader = new FileReader();
-      reader.readAsDataURL(blob);
-      reader.onloadend = async () => {
-        const base64Data = reader.result.split(",")[1];
-        const prompt = `Analyze this Panchayat meeting video. Provide a summary with: 1. Main Agenda 2. Key Decisions 3. Action Items. Use ONLY HTML tags (<b>, <ul>, <li>).`;
-        const result = await model.generateContent([
-          { inlineData: { data: base64Data, mimeType: "video/mp4" } },
-          prompt,
-        ]);
-        const summaryText = result.response.text();
+      const functions = getFunctions();
+      const analyzeMeetingVideo = httpsCallable(functions, "analyzeMeetingVideo");
+      
+      const result = await analyzeMeetingVideo({ videoUrl: meetingData.videoUrl });
+      
+      if (result.data && result.data.success) {
         const docRef = doc(db, "meetings", meetingId);
         await updateDoc(docRef, {
-          liveSummary: summaryText,
+          liveSummary: result.data.summary,
           status: "completed",
         });
         alert("AI Analysis Complete!");
-        setIsAnalyzing(false);
-      };
+      } else {
+        alert("AI Processing failed to return a summary.");
+      }
     } catch (err) {
-      console.error("Direct AI Error:", err);
-      alert("AI Processing failed.");
+      console.error("Backend AI Error:", err);
+      alert("AI Processing failed on the server.");
+    } finally {
       setIsAnalyzing(false);
     }
   };
@@ -145,6 +157,7 @@ const MeetingDashboard = ({ user }) => {
   const handleToggleRecording = async () => {
     const functions = getFunctions();
     const processSpeech = httpsCallable(functions, "processSpeech");
+    
     if (!isRecording) {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -159,11 +172,14 @@ const MeetingDashboard = ({ user }) => {
               const base64data = reader.result.split(",")[1];
               try {
                 const result = await processSpeech({ audioBase64: base64data });
-                if (result.data.text) {
+                if (result.data && result.data.text) {
+                  // Re-fetch current doc to avoid race conditions with local state
                   const docRef = doc(db, "meetings", meetingId);
+                  const currentDoc = await getDoc(docRef);
+                  const currentTranscript = currentDoc.exists() ? currentDoc.data().transcript || "" : "";
+                  
                   await updateDoc(docRef, {
-                    transcript:
-                      (meetingData?.transcript || "") + " " + result.data.text,
+                    transcript: currentTranscript + " " + result.data.text,
                   });
                 }
               } catch (err) {
@@ -172,6 +188,7 @@ const MeetingDashboard = ({ user }) => {
             };
           }
         };
+        // Capture audio in 10-second chunks
         mediaRecorderRef.current.start(10000);
         setIsRecording(true);
       } catch (err) {
@@ -187,6 +204,9 @@ const MeetingDashboard = ({ user }) => {
       setIsRecording(false);
     }
   };
+
+  if (errorMsg)
+    return <div style={{...loaderStyle, color: "red"}}>{errorMsg}</div>;
 
   if (!meetingData)
     return <div style={loaderStyle}>Synchronizing AI Data...</div>;

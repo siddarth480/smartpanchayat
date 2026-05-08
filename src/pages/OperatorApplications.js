@@ -10,6 +10,18 @@ import {
   getDoc,
 } from "firebase/firestore";
 import { useLocation, useNavigate } from "react-router-dom";
+import {
+  ArrowLeft,
+  Activity,
+  Phone,
+  MapPin,
+  CheckCircle2,
+  XCircle,
+  RefreshCcw,
+  Send,
+  Loader2,
+  AlertCircle
+} from "lucide-react";
 
 const ApplicationsList = () => {
   const [applications, setApplications] = useState([]);
@@ -36,7 +48,6 @@ const ApplicationsList = () => {
     );
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const apps = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      // Sort: Pending items first
       apps.sort((a, b) => (a.status?.includes("pending") ? -1 : 1));
       setApplications(apps);
       setLoading(false);
@@ -58,194 +69,131 @@ const ApplicationsList = () => {
   };
 
   const stats = {
-    total: applications.length,
-    pending: applications.filter(
-      (a) => a.status === "pending" || a.status === "pending_operator"
-    ).length,
-    forwarded: applications.filter((a) => a.status === "forwarded").length,
-    verified: applications.filter((a) => a.status === "approved").length,
+    pending: applications.filter(a => a.status === "pending" || a.status === "pending_operator").length,
+    forwarded: applications.filter(a => a.status === "forwarded").length,
+    verified: applications.filter(a => a.status === "approved").length,
   };
 
-  if (loading)
+  if (loading) {
     return (
       <div style={styles.loaderContainer}>
-        <div style={styles.spinner}></div>
-        <p style={styles.syncText}>Accessing Secure Data...</p>
+        <Loader2 className="animate-spin" size={40} color="#0F172A" />
+        <p style={styles.loaderText}>Syncing securely...</p>
       </div>
     );
+  }
 
   return (
     <div style={styles.pageWrapper}>
       <div style={styles.container}>
-        {/* Breadcrumb & Live Indicator */}
+        
         <div style={styles.navbar}>
           <button onClick={() => navigate(-1)} style={styles.backBtn}>
-            <span style={styles.backIcon}>←</span> Schemes /{" "}
-            <span style={{ color: "#0f172a" }}>Applications</span>
+            <ArrowLeft size={16} /> Back to Schemes
           </button>
           <div style={styles.liveIndicator}>
-            <div style={styles.pulseDot}></div>
+            <Activity size={14} color="#10B981" />
             <span style={styles.liveText}>LIVE MONITORING</span>
           </div>
         </div>
 
-        {/* Dashboard Header */}
         <div style={styles.heroSection}>
           <div>
-            <h1 style={styles.mainTitle}>
-              {schemeTitle || "Application Management"}
-            </h1>
-            <p style={styles.subTitle}>
-              High-authority verification and routing portal.
-            </p>
+            <h1 style={styles.mainTitle}>{schemeTitle || "Application Management"}</h1>
+            <p style={styles.subTitle}>High-authority verification and routing portal.</p>
           </div>
 
           <div style={styles.analyticsBar}>
             <div style={styles.statBox}>
               <span style={styles.statLabel}>PENDING</span>
-              <span style={{ ...styles.statValue, color: "#f59e0b" }}>
-                {stats.pending}
-              </span>
+              <span style={{ ...styles.statValue, color: "#F59E0B" }}>{stats.pending}</span>
             </div>
             <div style={styles.statDivider}></div>
             <div style={styles.statBox}>
               <span style={styles.statLabel}>FORWARDED</span>
-              <span style={{ ...styles.statValue, color: "#6366f1" }}>
-                {stats.forwarded}
-              </span>
+              <span style={{ ...styles.statValue, color: "#6366F1" }}>{stats.forwarded}</span>
             </div>
             <div style={styles.statDivider}></div>
             <div style={styles.statBox}>
-              <span style={styles.statLabel}>VERIFIED</span>
-              <span style={{ ...styles.statValue, color: "#10b981" }}>
-                {stats.verified}
-              </span>
+              <span style={styles.statLabel}>APPROVED</span>
+              <span style={{ ...styles.statValue, color: "#10B981" }}>{stats.verified}</span>
             </div>
           </div>
         </div>
 
         {applications.length === 0 ? (
           <div style={styles.emptyState}>
-            <div style={styles.emptyIcon}>∅</div>
+            <AlertCircle size={64} color="#E2E8F0" />
             <h3 style={styles.emptyTitle}>Queue is Clear</h3>
-            <p style={styles.emptyDesc}>
-              No citizen applications require attention at this time.
-            </p>
+            <p style={styles.emptyDesc}>No citizen applications require attention at this time.</p>
           </div>
         ) : (
-          <div style={styles.dataList}>
+          <div style={styles.tableCard}>
             <div style={styles.tableHeader}>
-              <span style={{ flex: 2 }}>APPLICANT IDENTITY</span>
-              <span style={{ flex: 1.5 }}>CONTACT & LOCATION</span>
-              <span style={{ flex: 1, textAlign: "center" }}>
-                CURRENT STATUS
-              </span>
-              <span style={{ flex: 2, textAlign: "right" }}>ACTIONS</span>
+              <div style={{ flex: 2 }}>APPLICANT</div>
+              <div style={{ flex: 1.5 }}>CONTACT INFO</div>
+              <div style={{ flex: 1 }}>STATUS</div>
+              <div style={{ flex: 2, textAlign: "right" }}>ACTIONS</div>
             </div>
 
-            {applications.map((app) => (
-              <div key={app.id} style={styles.row}>
-                <div
-                  style={{
-                    ...styles.accentBorder,
-                    background: getStatusColor(app.status),
-                  }}
-                ></div>
-
-                {/* Identity */}
-                <div style={styles.cellIdentity}>
-                  <div
-                    style={{
-                      ...styles.avatar,
-                      border: `2px solid ${getStatusColor(app.status)}22`,
-                    }}
-                  >
-                    {app.name?.charAt(0) || "U"}
-                  </div>
-                  <div>
-                    <div style={styles.primaryText}>
-                      {app.name || app.applicantName}
+            <div style={styles.tableBody}>
+              {applications.map((app) => (
+                <div key={app.id} style={styles.tableRow}>
+                  
+                  <div style={styles.cellIdentity}>
+                    <div style={{...styles.avatar, color: getStatusColor(app.status), backgroundColor: `${getStatusColor(app.status)}15`}}>
+                      {app.name?.charAt(0) || app.applicantName?.charAt(0) || "U"}
                     </div>
-                    <div style={styles.secondaryText}>
-                      ID: {app.aadhaar || app.aadhaarNumber}
+                    <div>
+                      <div style={styles.primaryText}>{app.name || app.applicantName}</div>
+                      <div style={styles.secondaryText}>Aadhaar: {app.aadhaar || app.aadhaarNumber}</div>
                     </div>
                   </div>
-                </div>
 
-                {/* Details */}
-                <div style={styles.cellDetails}>
-                  <div style={styles.iconDetail}>
-                    <span style={styles.miniIcon}>📞</span> {app.mobile}
+                  <div style={styles.cellDetails}>
+                    <div style={styles.iconDetail}>
+                      <Phone size={14} color="#94A3B8" /> {app.mobile}
+                    </div>
+                    <div style={styles.iconDetail}>
+                      <MapPin size={14} color="#94A3B8" /> {app.district}
+                    </div>
                   </div>
-                  <div style={styles.iconDetail}>
-                    <span style={styles.miniIcon}>📍</span> {app.district}
+
+                  <div style={styles.cellStatus}>
+                    <span style={{...styles.statusBadge, ...getBadgeColors(app.status)}}>
+                      {app.status?.toUpperCase().replace("_", " ")}
+                    </span>
                   </div>
-                </div>
 
-                {/* Status */}
-                <div style={styles.cellStatus}>
-                  <span
-                    style={{
-                      ...styles.statusTag,
-                      ...getBadgeColors(app.status),
-                    }}
-                  >
-                    {app.status?.toUpperCase().replace("_", " ")}
-                  </span>
-                </div>
-
-                {/* Actions */}
-                <div style={styles.cellActions}>
-                  {["pending", "pending_operator"].includes(app.status) ? (
-                    <div style={styles.btnGroup}>
-                      <button
-                        style={styles.btnVerify}
-                        onClick={() =>
-                          handleUpdateStatus(
-                            app.id,
-                            "forwarded",
-                            "Verified by Operator."
-                          )
-                        }
-                      >
-                        Forward
-                      </button>
-                      <button
-                        style={styles.btnReapply}
-                        onClick={() => {
-                          const msg = window.prompt(
-                            "Reason for re-application:"
-                          );
+                  <div style={styles.cellActions}>
+                    {["pending", "pending_operator"].includes(app.status) ? (
+                      <div style={styles.btnGroup}>
+                        <button style={styles.btnVerify} onClick={() => handleUpdateStatus(app.id, "forwarded", "Verified by Operator.")}>
+                          <Send size={14} /> Forward
+                        </button>
+                        <button style={styles.btnReapply} onClick={() => {
+                          const msg = window.prompt("Reason for re-application:");
                           if (msg) handleUpdateStatus(app.id, "reapply", msg);
-                        }}
-                      >
-                        Request Fix
-                      </button>
-                      <button
-                        style={styles.btnReject}
-                        onClick={() => {
-                          if (
-                            window.confirm("Permanently reject this applicant?")
-                          ) {
-                            handleUpdateStatus(
-                              app.id,
-                              "rejected_operator",
-                              "Verification Failed"
-                            );
+                        }}>
+                          <RefreshCcw size={14} /> Fix
+                        </button>
+                        <button style={styles.btnReject} onClick={() => {
+                          if (window.confirm("Permanently reject this applicant?")) {
+                            handleUpdateStatus(app.id, "rejected_operator", "Verification Failed");
                           }
-                        }}
-                      >
-                        Reject
-                      </button>
-                    </div>
-                  ) : (
-                    <div style={styles.completionNote}>
-                      <span style={styles.checkIcon}>✓</span> Processed
-                    </div>
-                  )}
+                        }}>
+                          <XCircle size={14} /> Reject
+                        </button>
+                      </div>
+                    ) : (
+                      <div style={styles.completionNote}>
+                        <CheckCircle2 size={16} color="#10B981" /> Processed
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -254,32 +202,34 @@ const ApplicationsList = () => {
 };
 
 const getStatusColor = (s) => {
-  if (s === "approved") return "#10b981";
-  if (s === "forwarded") return "#6366f1";
-  if (s === "reapply") return "#3b82f6";
-  if (s?.includes("rejected")) return "#ef4444";
-  return "#f59e0b";
+  if (s === "approved") return "#10B981";
+  if (s === "forwarded") return "#6366F1";
+  if (s === "reapply") return "#3B82F6";
+  if (s?.includes("rejected")) return "#EF4444";
+  return "#F59E0B";
 };
 
 const getBadgeColors = (s) => {
-  if (s === "approved") return { background: "#D1FAE5", color: "#065f46" };
-  if (s === "forwarded") return { background: "#E0E7FF", color: "#3730a3" };
-  if (s === "reapply") return { background: "#DBEAFE", color: "#1e40af" };
-  if (s?.includes("rejected"))
-    return { background: "#FEE2E2", color: "#991b1b" };
-  return { background: "#FEF3C7", color: "#92400e" };
+  if (s === "approved") return { backgroundColor: "#ECFDF5", color: "#065F46" };
+  if (s === "forwarded") return { backgroundColor: "#EEF2FF", color: "#3730A3" };
+  if (s === "reapply") return { backgroundColor: "#EFF6FF", color: "#1E40AF" };
+  if (s?.includes("rejected")) return { backgroundColor: "#FEF2F2", color: "#991B1B" };
+  return { backgroundColor: "#FFFBEB", color: "#92400E" };
 };
 
 const styles = {
   pageWrapper: {
-    background: "#f1f5f9",
+    background: "#F8FAFC",
     minHeight: "100vh",
-    paddingTop: "140px",
+    paddingTop: "120px",
     paddingBottom: "100px",
     fontFamily: "'Inter', sans-serif",
   },
-  container: { maxWidth: "1200px", margin: "0 auto", padding: "0 24px" },
-
+  container: {
+    maxWidth: "1240px",
+    margin: "0 auto",
+    padding: "0 24px",
+  },
   navbar: {
     display: "flex",
     justifyContent: "space-between",
@@ -287,204 +237,248 @@ const styles = {
     marginBottom: "32px",
   },
   backBtn: {
-    background: "none",
+    background: "transparent",
     border: "none",
-    color: "#64748b",
-    cursor: "pointer",
-    fontWeight: "600",
+    color: "#475569",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
     fontSize: "14px",
-    letterSpacing: "-0.2px",
+    fontWeight: "700",
+    cursor: "pointer",
   },
   liveIndicator: {
     display: "flex",
     alignItems: "center",
     gap: "8px",
-    background: "#fff",
-    padding: "6px 14px",
+    background: "#FFFFFF",
+    padding: "8px 16px",
     borderRadius: "30px",
-    boxShadow: "0 4px 6px -1px rgba(0,0,0,0.05)",
+    border: "1px solid #E2E8F0",
   },
   liveText: {
-    fontSize: "10px",
-    color: "#10b981",
+    fontSize: "11px",
+    color: "#10B981",
     fontWeight: "800",
     letterSpacing: "0.5px",
   },
-  pulseDot: {
-    width: "6px",
-    height: "6px",
-    borderRadius: "50%",
-    background: "#10b981",
-    animation: "pulse 2s infinite",
-  },
-
   heroSection: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
+    flexWrap: "wrap",
+    gap: "24px",
     marginBottom: "40px",
-    background: "#fff",
-    padding: "32px",
-    borderRadius: "24px",
-    boxShadow: "0 10px 15px -3px rgba(0,0,0,0.04)",
   },
   mainTitle: {
-    fontSize: "28px",
+    fontSize: "32px",
     fontWeight: "900",
-    color: "#0f172a",
+    color: "#0F172A",
+    margin: "0 0 8px 0",
+    letterSpacing: "-0.5px",
+  },
+  subTitle: {
+    color: "#64748B",
+    fontSize: "16px",
     margin: 0,
   },
-  subTitle: { color: "#64748b", fontSize: "15px", marginTop: "4px" },
-
-  analyticsBar: { display: "flex", alignItems: "center", gap: "24px" },
-  statBox: { textAlign: "right" },
-  statLabel: {
-    fontSize: "10px",
-    fontWeight: "800",
-    color: "#94a3b8",
-    letterSpacing: "0.5px",
-  },
-  statValue: { fontSize: "24px", fontWeight: "900", display: "block" },
-  statDivider: { width: "1px", height: "30px", background: "#e2e8f0" },
-
-  tableHeader: {
-    display: "flex",
-    padding: "0 32px 16px 32px",
-    fontSize: "11px",
-    fontWeight: "800",
-    color: "#94a3b8",
-    letterSpacing: "0.5px",
-  },
-  dataList: { display: "flex", flexDirection: "column", gap: "12px" },
-  row: {
-    background: "#fff",
-    borderRadius: "16px",
-    padding: "20px 32px",
+  analyticsBar: {
     display: "flex",
     alignItems: "center",
-    boxShadow: "0 4px 6px -1px rgba(0,0,0,0.02)",
-    border: "1px solid rgba(226, 232, 240, 0.8)",
-    position: "relative",
+    gap: "24px",
+    backgroundColor: "#FFFFFF",
+    padding: "20px 32px",
+    borderRadius: "20px",
+    border: "1px solid #E2E8F0",
+  },
+  statBox: {
+    textAlign: "right",
+  },
+  statLabel: {
+    fontSize: "11px",
+    fontWeight: "800",
+    color: "#94A3B8",
+    letterSpacing: "1px",
+    display: "block",
+    marginBottom: "4px",
+  },
+  statValue: {
+    fontSize: "28px",
+    fontWeight: "900",
+    lineHeight: "1",
+  },
+  statDivider: {
+    width: "1px",
+    height: "30px",
+    background: "#E2E8F0",
+  },
+  tableCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: "24px",
+    border: "1px solid #E2E8F0",
     overflow: "hidden",
   },
-  accentBorder: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: "4px",
+  tableHeader: {
+    display: "flex",
+    padding: "20px 32px",
+    backgroundColor: "#F8FAFC",
+    borderBottom: "1px solid #E2E8F0",
+    fontSize: "12px",
+    fontWeight: "800",
+    color: "#64748B",
+    letterSpacing: "1px",
   },
-
-  cellIdentity: { display: "flex", alignItems: "center", gap: "16px", flex: 2 },
+  tableBody: {
+    display: "flex",
+    flexDirection: "column",
+  },
+  tableRow: {
+    display: "flex",
+    alignItems: "center",
+    padding: "24px 32px",
+    borderBottom: "1px solid #F1F5F9",
+    transition: "background 0.2s",
+  },
+  cellIdentity: {
+    flex: 2,
+    display: "flex",
+    alignItems: "center",
+    gap: "16px",
+  },
   avatar: {
-    width: "44px",
-    height: "44px",
-    borderRadius: "12px",
-    background: "#f8fafc",
+    width: "48px",
+    height: "48px",
+    borderRadius: "14px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     fontWeight: "800",
-    color: "#1e293b",
+    fontSize: "18px",
   },
-  primaryText: { fontWeight: "750", color: "#0f172a", fontSize: "15.5px" },
-  secondaryText: { fontSize: "12.5px", color: "#94a3b8", marginTop: "2px" },
-
+  primaryText: {
+    fontWeight: "800",
+    color: "#0F172A",
+    fontSize: "16px",
+    marginBottom: "4px",
+  },
+  secondaryText: {
+    fontSize: "13px",
+    color: "#64748B",
+    fontWeight: "500",
+  },
   cellDetails: {
     flex: 1.5,
     display: "flex",
     flexDirection: "column",
-    gap: "6px",
+    gap: "8px",
   },
   iconDetail: {
-    fontSize: "13.5px",
+    fontSize: "14px",
     color: "#475569",
     display: "flex",
     alignItems: "center",
     gap: "8px",
+    fontWeight: "500",
   },
-  miniIcon: { opacity: 0.7 },
-
-  cellStatus: { flex: 1, display: "flex", justifyContent: "center" },
-  statusTag: {
-    padding: "6px 14px",
+  cellStatus: {
+    flex: 1,
+    display: "flex",
+  },
+  statusBadge: {
+    padding: "6px 12px",
     borderRadius: "8px",
-    fontSize: "10.5px",
+    fontSize: "11px",
     fontWeight: "800",
+    letterSpacing: "0.5px",
   },
-
-  cellActions: { flex: 2, display: "flex", justifyContent: "flex-end" },
-  btnGroup: { display: "flex", gap: "8px" },
+  cellActions: {
+    flex: 2,
+    display: "flex",
+    justifyContent: "flex-end",
+  },
+  btnGroup: {
+    display: "flex",
+    gap: "8px",
+  },
   btnVerify: {
-    background: "#0f172a",
-    color: "#fff",
+    background: "#0F172A",
+    color: "#FFFFFF",
     border: "none",
-    padding: "10px 18px",
+    padding: "10px 16px",
     borderRadius: "10px",
-    fontSize: "12px",
-    fontWeight: "700",
-    cursor: "pointer",
-    transition: "0.2s",
-  },
-  btnReapply: {
-    background: "#fff",
-    color: "#475569",
-    border: "1px solid #e2e8f0",
-    padding: "10px 18px",
-    borderRadius: "10px",
-    fontSize: "12px",
-    fontWeight: "700",
-    cursor: "pointer",
-  },
-  btnReject: {
-    background: "#fef2f2",
-    color: "#ef4444",
-    border: "none",
-    padding: "10px 18px",
-    borderRadius: "10px",
-    fontSize: "12px",
-    fontWeight: "700",
-    cursor: "pointer",
-  },
-
-  completionNote: {
     fontSize: "13px",
-    color: "#94a3b8",
-    fontWeight: "600",
+    fontWeight: "700",
+    cursor: "pointer",
     display: "flex",
     alignItems: "center",
     gap: "6px",
   },
-  checkIcon: { color: "#10b981", fontSize: "16px" },
-
+  btnReapply: {
+    background: "#FFFFFF",
+    color: "#475569",
+    border: "1px solid #E2E8F0",
+    padding: "10px 16px",
+    borderRadius: "10px",
+    fontSize: "13px",
+    fontWeight: "700",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+  },
+  btnReject: {
+    background: "#FEF2F2",
+    color: "#EF4444",
+    border: "none",
+    padding: "10px 16px",
+    borderRadius: "10px",
+    fontSize: "13px",
+    fontWeight: "700",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+  },
+  completionNote: {
+    fontSize: "14px",
+    color: "#64748B",
+    fontWeight: "700",
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+  },
   loaderContainer: {
     height: "100vh",
     display: "flex",
     flexDirection: "column",
     justifyContent: "center",
     alignItems: "center",
-    background: "#f8fafc",
+    background: "#F8FAFC",
   },
-  spinner: {
-    width: "32px",
-    height: "32px",
-    border: "4px solid #e2e8f0",
-    borderTop: "4px solid #0f172a",
-    borderRadius: "50%",
-    animation: "spin 0.8s linear infinite",
-  },
-  syncText: {
+  loaderText: {
     marginTop: "16px",
-    color: "#64748b",
-    fontSize: "14px",
+    color: "#64748B",
+    fontSize: "15px",
     fontWeight: "600",
-    letterSpacing: "-0.2px",
   },
-
-  emptyState: { textAlign: "center", padding: "120px 0" },
-  emptyIcon: { fontSize: "48px", color: "#cbd5e1", marginBottom: "16px" },
-  emptyTitle: { fontSize: "20px", fontWeight: "800", color: "#475569" },
-  emptyDesc: { color: "#94a3b8", fontSize: "15px" },
+  emptyState: {
+    textAlign: "center",
+    padding: "100px 20px",
+    backgroundColor: "#FFFFFF",
+    borderRadius: "24px",
+    border: "1px dashed #CBD5E1",
+  },
+  emptyTitle: {
+    fontSize: "24px",
+    fontWeight: "800",
+    color: "#0F172A",
+    margin: "24px 0 8px",
+  },
+  emptyDesc: {
+    color: "#64748B",
+    fontSize: "16px",
+    margin: 0,
+  },
 };
 
 export default ApplicationsList;
