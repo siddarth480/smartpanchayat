@@ -3,7 +3,7 @@ import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { initializeFirestore, memoryLocalCache } from "firebase/firestore"; // ✅ Updated
 import { getStorage } from "firebase/storage";
-import { getFunctions } from "firebase/functions"; 
+import { getFunctions, connectFunctionsEmulator } from "firebase/functions"; 
 
 const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
@@ -21,6 +21,11 @@ const auth = getAuth(app);
 const storage = getStorage(app);
 // 🌍 Use 'us-central1' (default) or your specific region
 const functions = getFunctions(app, "us-central1");
+
+if (window.location.hostname === "localhost") {
+  connectFunctionsEmulator(functions, "localhost", 5001);
+  console.log("🔥 Connected to Firebase Functions Emulator");
+}
 
 // ✅ Fix: This initialization prevents the "Unexpected State" crash
 const db = initializeFirestore(app, {

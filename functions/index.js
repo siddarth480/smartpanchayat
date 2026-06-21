@@ -13,8 +13,8 @@ const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 // RAZORPAY CONFIGURATION
 // Replace these with your ACTUAL keys from the Razorpay Dashboard
-const RAZORPAY_KEY_ID = "rzp_test_S0uLIRwkoZzK3m";
-const RAZORPAY_KEY_SECRET = "Idxrdi3CMf2luMRZVwk6DtcE";
+const RAZORPAY_KEY_ID = "rzp_test_T4GPlvO8kwjhrf";
+const RAZORPAY_KEY_SECRET = "iM3pYVj77c37E570nC927Vb5";
 
 const razorpay = new Razorpay({
   key_id: RAZORPAY_KEY_ID,
@@ -30,18 +30,36 @@ exports.createOrder = functions.https.onCall(async (data, context) => {
     );
   }
 
-  const { amount, billId } = data;
+  const { amount, billId, appId } = data;
 
   try {
+    // Parse the amount, removing any commas, and ensure it's a valid number
+    const parsedAmount = parseFloat(String(amount).replace(/,/g, ""));
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      throw new Error("Invalid bill amount: " + amount);
+    }
+
+    // Razorpay receipt max length is 40 characters
+    const receiptId = `bill_${billId}`.substring(0, 40);
+
     const order = await razorpay.orders.create({
-      amount: Math.round(parseFloat(amount) * 100), // Convert INR to Paise
+      amount: Math.round(parsedAmount * 100), // Convert INR to Paise
       currency: "INR",
-      receipt: `bill_${billId}`,
+      receipt: receiptId,
+      notes: {
+        appId: appId || "default",
+        billId: billId,
+      },
     });
     return order;
   } catch (error) {
     console.error("Razorpay Error:", error);
-    throw new functions.https.HttpsError("internal", error.message);
+    // Extract actual error description if it's an object (which Razorpay often returns)
+    const errorMsg = error.error
+      ? error.error.description
+      : error.message || JSON.stringify(error);
+      
+    throw new functions.https.HttpsError("internal", `Razorpay Error: ${errorMsg}`);
   }
 });
 
@@ -81,7 +99,54 @@ exports.verifyPayment = functions.https.onCall(async (data, context) => {
 });
 
 // ============================================================
-// 2. AI MEETING VIDEO ANALYSIS
+// 2. Webhook for Razorpay (Optional Real-time Capture)
+// ============================================================
+exports.razorpayWebhook = functions.https.onRequest(async (req, res) => {
+  // Replace with your Webhook Secret from Razorpay Dashboard
+  const WEBHOOK_SECRET = "YOUR_WEBHOOK_SECRET";
+  
+  const signature = req.headers["x-razorpay-signature"];
+  
+  try {
+    const expectedSignature = crypto
+      .createHmac("sha256", WEBHOOK_SECRET)
+      .update(req.rawBody)
+      .digest("hex");
+
+    if (signature === expectedSignature) {
+      const event = req.body.event;
+      if (event === "payment.captured") {
+        const payment = req.body.payload.payment.entity;
+        const notes = payment.notes || {};
+        
+        const billId = notes.billId;
+        const appId = notes.appId;
+
+        if (billId && appId) {
+          await admin
+            .firestore()
+            .doc(`artifacts/${appId}/public/data/bills/${billId}`)
+            .update({
+              status: "Paid",
+              paidDate: admin.firestore.FieldValue.serverTimestamp(),
+              razorpay_payment_id: payment.id,
+              webhookVerified: true,
+            });
+          console.log(`Payment captured via webhook for bill ${billId}`);
+        }
+      }
+      res.status(200).send("OK");
+    } else {
+      res.status(400).send("Invalid Signature");
+    }
+  } catch (error) {
+    console.error("Webhook verification error:", error);
+    res.status(500).send("Internal Error");
+  }
+});
+
+// ============================================================
+// 3. AI MEETING VIDEO ANALYSIS
 // ============================================================
 exports.analyzeMeetingVideo = functions
   .runWith({

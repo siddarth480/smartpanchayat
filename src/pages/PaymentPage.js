@@ -21,7 +21,7 @@ import {
   signInWithCustomToken,
   onAuthStateChanged,
 } from "firebase/auth";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { collection, query, where, onSnapshot, doc, updateDoc, Timestamp } from "firebase/firestore";
 
 /* ---------------- App Variables ---------------- */
 
@@ -177,7 +177,7 @@ const BillCard = ({ bill, onPayClick, isThisBillPaying }) => {
             <Loader2 size={20} className="animate-spin" />
           ) : (
             <>
-              Pay Securely <ArrowRight size={18} />
+              Pay with Razorpay <ArrowRight size={18} />
             </>
           )}
         </motion.button>
@@ -240,6 +240,7 @@ const PaymentPage = () => {
   // ... existing imports ...
 
   const handlePaymentInitiation = async (bill) => {
+    alert("Doing payment...");
     if (!window.Razorpay) {
       setError("Payment gateway not loaded. Please refresh the page.");
       return;
@@ -250,19 +251,25 @@ const PaymentPage = () => {
     setSuccessMsg(null);
 
     try {
-      const createOrder = httpsCallable(functions, "createOrder");
-      const verifyPayment = httpsCallable(functions, "verifyPayment");
-
-      // 1. Create Order
-      const orderResponse = await createOrder({
-        amount: bill.amount,
-        billId: bill.id,
+      // 1. Create Order using your custom private backend
+      const response = await fetch("https://smartpanchayat-backend.onrender.com/api/payment/create-order", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          amount: bill.amount,
+          billId: bill.id,
+          appId: appId,
+        }),
       });
-      const order = orderResponse.data;
+      
+      if (!response.ok) throw new Error("Failed to create order");
+      const order = await response.json();
 
       // 2. Open Razorpay
       const options = {
-        key: "rzp_test_S0uLIRwkoZzK3m",
+        key: "rzp_test_T4GPlvO8kwjhrf",
         amount: order.amount,
         currency: "INR",
         name: "Gram Panchayat",
@@ -270,13 +277,13 @@ const PaymentPage = () => {
         order_id: order.id,
         handler: async function (response) {
           try {
-            await verifyPayment({
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-              billId: bill.id,
-              appId: appId,
+            // Update the bill status manually in Firebase here on the frontend
+            const billRef = doc(db, `/artifacts/${appId}/public/data/bills`, bill.id);
+            await updateDoc(billRef, {
+              status: "Paid",
+              paidDate: Timestamp.now()
             });
+
             // Note: The onSnapshot listener in your useEffect will
             // automatically update the UI when Firestore changes.
             setPayingBillId(null);
@@ -284,7 +291,7 @@ const PaymentPage = () => {
             setTimeout(() => setSuccessMsg(null), 5000);
           } catch (err) {
             setPayingBillId(null);
-            setError("Verification failed. Please contact admin.");
+            setError("Update failed. Please try again or contact admin.");
           }
         },
         prefill: {

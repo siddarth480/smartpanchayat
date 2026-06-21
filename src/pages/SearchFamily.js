@@ -4,7 +4,7 @@ import { db } from "../firebase/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  Search, Users, User, ShieldCheck, Mail, Phone, Hash, UserCircle, UsersRound, X, AlertCircle 
+  Search, Users, User, ShieldCheck, Mail, Phone, Hash, UserCircle, UsersRound, X, AlertCircle, FileText 
 } from "lucide-react";
 import "./SearchFamily.css";
 
@@ -275,6 +275,27 @@ const SearchFamily = () => {
                     <span><strong>Age:</strong> {user.age || "NA"}</span>
                   </div>
                   
+                  {user.role === "villager" && (user.rationCardUrl || user.sevenTwelfthUrl) && (
+                    <div className="sf-info-docs">
+                      <div className="sf-docs-title">
+                        <FileText className="sf-info-icon" />
+                        <strong>Uploaded Documents:</strong>
+                      </div>
+                      <div className="sf-docs-links">
+                        {user.rationCardUrl && (
+                          <a href={user.rationCardUrl} target="_blank" rel="noopener noreferrer" className="sf-doc-link">
+                             Ration Card
+                          </a>
+                        )}
+                        {user.sevenTwelfthUrl && (
+                          <a href={user.sevenTwelfthUrl} target="_blank" rel="noopener noreferrer" className="sf-doc-link">
+                             7/12 Extract
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {user.role === "villager" && user.familyId && (
                     <button className="sf-family-btn" onClick={() => viewFamilyMembers(user)}>
                       <Users size={18} /> View Family Members
