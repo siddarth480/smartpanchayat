@@ -252,7 +252,7 @@ const PaymentPage = () => {
 
     try {
       // 1. Create Order using your custom private backend
-      const response = await fetch("https://smartpanchayat-backend.onrender.com/api/payment/create-order", {
+      const response = await fetch("https://smartpanchyat-backend.onrender.com/api/payment/create-order", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
